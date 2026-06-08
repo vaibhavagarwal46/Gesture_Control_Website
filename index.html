@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Gesture Control Website</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <style>
+    :root {
+      --bg: #050507;
+      --surface: rgba(255, 255, 255, 0.05);
+      --surface-hover: rgba(255, 255, 255, 0.1);
+      --border: rgba(255, 255, 255, 0.1);
+      --accent-cyan: #00e5ff;
+      --accent-purple: #b300ff;
+      --accent-gold: #e5c07b;
+      --accent-red: #ff3366;
+      --accent-green: #00ff9d;
+      --accent-fire: #ff6a00;
+      --text-main: #ffffff;
+      --text-muted: rgba(255, 255, 255, 0.6);
+      
+      --font-sans: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-sans); background: var(--bg); color: var(--text-main);
+      overflow: hidden; width: 100vw; height: 100vh; -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── SPLASH SCREEN ─────────────────────────────────── */
+    #splash {
+      position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; text-align: center; padding: 20px;
+      background: radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.05) 0%, var(--bg) 70%);
+      transition: opacity 0.6s ease, transform 0.6s ease;
+    }
+    #splash.out { opacity: 0; pointer-events: none; transform: scale(1.05); }
+
+    .splash-logo {
+      font-weight: 800; font-size: clamp(2.5rem, 8vw, 6rem); letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #fff 0%, var(--text-muted) 100%);
+      background-clip: text; -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; margin-bottom: 8px;
+    }
+    .splash-sub {
+      font-family: var(--font-mono); font-size: clamp(0.6rem, 2vw, 0.8rem); letter-spacing: 0.3em;
+      color: var(--accent-cyan); text-transform: uppercase; margin-bottom: 50px;
+    }
+
+    .enter-btn {
+      padding: 16px 48px; font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700;
+      color: var(--bg); background: var(--text-main); border: none; border-radius: 4px;
+      cursor: pointer; transition: all 0.3s ease;
+    }
+    .enter-btn:hover { background: var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 229, 255, 0.3); }
+
+    /* ── CANVASES ──────────────────────────────── */
+    #videoWrap { position: fixed; inset: 0; z-index: 0; }
+    video {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: cover; transform: scaleX(-1); 
+      filter: grayscale(0.5) brightness(0.6) contrast(1.1);
+    }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
+    #fxCanvas { z-index: 2; } 
+    #drawCanvas { z-index: 3; transition: opacity 0.3s ease; }
+
+    /* ── UI OVERLAYS ────────────────────────────────────────── */
+    #topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between; padding: 24px 40px;
+      background: linear-gradient(180deg, rgba(5,5,7,0.9) 0%, transparent 100%);
+      opacity: 0; transition: opacity 0.5s ease 0.2s;
+    }
+    #topbar.visible { opacity: 1; }
+
+    .brand-container { display: flex; align-items: center; gap: 16px; }
+    .brand-name { font-weight: 700; font-size: 1.1rem; letter-spacing: 0.05em; }
+    
+    .help-toggle {
+      width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-main); font-family: var(--font-mono);
+      font-size: 1rem; cursor: pointer; transition: 0.3s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .help-toggle:hover, .help-toggle.active { background: var(--accent-cyan); color: var(--bg); border-color: var(--accent-cyan); }
+
+    #modeSwitcher { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px; backdrop-filter: blur(10px); }
+    .mode-btn {
+      padding: 8px 24px; font-family: var(--font-sans); font-size: 0.85rem; font-weight: 600;
+      color: var(--text-muted); background: transparent; border: none; border-radius: 4px; cursor: pointer; transition: 0.3s;
+    }
+    .mode-btn.active { background: rgba(255,255,255,0.15); color: var(--text-main); }
+    .mode-btn:hover:not(.active) { color: var(--text-main); background: var(--surface-hover); }
+
+    .status-container { display: flex; gap: 12px; }
+    .hud-chip {
+      display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+      font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); backdrop-filter: blur(10px);
+    }
+    .hud-val { color: var(--text-main); font-weight: 700; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: 0.3s; }
+    .dot.active { background: var(--accent-cyan); box-shadow: 0 0 10px var(--accent-cyan); }
+
+    /* ── INDICATORS & PANELS ──────────────────────────────── */
+    #swipeIndicator {
+      position: fixed; top: 100px; left: 50%; transform: translateX(-50%);
+      z-index: 120; padding: 10px 24px;
+      background: rgba(0, 229, 255, 0.15); border: 1px solid var(--accent-cyan);
+      border-radius: 50px; font-family: var(--font-mono); font-size: 0.85rem;
+      font-weight: 700; color: var(--accent-cyan); letter-spacing: 0.1em;
+      backdrop-filter: blur(10px); box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+      opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: none; display: flex; align-items: center; gap: 10px; white-space: nowrap;
+    }
+    #swipeIndicator.active { opacity: 1; transform: translateX(-50%) scale(1.05); }
+
+    #instructionsPanel {
+      position: fixed; top: 100px; left: 40px; z-index: 150; width: 380px;
+      background: rgba(10, 10, 15, 0.85); border: 1px solid var(--border); border-radius: 8px;
+      padding: 24px; backdrop-filter: blur(20px); transform: translateX(-120vw);
+      opacity: 0; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+    }
+    #instructionsPanel.show { transform: translateX(0); opacity: 1; }
+    #instructionsPanel h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--accent-cyan); margin-bottom: 20px; font-family: var(--font-mono); }
+    
+    .instruction-list { list-style: none; display: flex; flex-direction: column; gap: 18px; }
+    .instruction-item { display: flex; gap: 14px; font-size: 0.9rem; line-height: 1.5; color: var(--text-muted); }
+    .instruction-item strong { color: var(--text-main); display: block; margin-bottom: 4px; }
+    .icon-box { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 1.3rem; height: fit-content; }
+
+    #bottom-toast {
+      position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(20px);
+      z-index: 100; display: flex; align-items: center; gap: 12px; padding: 12px 24px;
+      background: rgba(5, 5, 7, 0.9); border: 1px solid var(--border); border-radius: 50px;
+      font-size: 0.85rem; color: var(--text-main); opacity: 0; transition: all 0.3s; backdrop-filter: blur(10px); white-space: nowrap;
+    }
+    #bottom-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    #center-alert {
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
+      z-index: 150; font-weight: 800; font-size: clamp(2rem, 5vw, 4rem); letter-spacing: 0.05em; text-align: center;
+      color: var(--text-main); opacity: 0; pointer-events: none; transition: all 0.3s ease; text-shadow: 0 10px 40px rgba(0,0,0,0.6);
+    }
+    #center-alert.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+    #flashOverlay {
+      position: fixed; inset: 0; background: var(--accent-cyan); opacity: 0;
+      pointer-events: none; z-index: 50; transition: opacity 0.5s ease-out; mix-blend-mode: overlay;
+    }
+    #flashOverlay.flash { opacity: 0.15; transition: opacity 0.05s ease-in; }
+
+    #clearBtn {
+      position: fixed; bottom: 40px; right: 40px; z-index: 100; padding: 12px 24px;
+      font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;
+      color: var(--bg); background: var(--text-main); border: none; border-radius: 4px;
+      cursor: pointer; transition: 0.3s; opacity: 0; pointer-events: none;
+    }
+    #clearBtn.visible { opacity: 1; pointer-events: all; }
+    #clearBtn:hover { background: var(--accent-red); color: #fff; }
+
+    @media (max-width: 768px) {
+      #topbar { padding: 16px 20px; flex-direction: column; gap: 16px; }
+      .brand-container { width: 100%; justify-content: space-between; }
+      .status-container { display: none; }
+      #modeSwitcher { width: 100%; }
+      .mode-btn { flex: 1; padding: 10px 8px; font-size: 0.75rem; }
+      #swipeIndicator { top: 150px; font-size: 0.75rem; }
+      #instructionsPanel { left: 20px; right: 20px; width: auto; top: 150px; }
+      #clearBtn { bottom: 90px; right: 20px; padding: 10px 16px; }
+      #bottom-toast { bottom: 20px; width: 90%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="flashOverlay"></div>
+
+<div id="splash">
+  <div class="splash-logo">Gesture Control</div>
+  <div class="splash-sub">Precision Gesture Control Engine</div>
+  <button class="enter-btn" id="enterBtn">Let's Go</button>
+</div>
+
+<div id="videoWrap">
+  <video id="vid" autoplay playsinline muted></video>
+  <canvas id="fxCanvas"></canvas>
+  <canvas id="drawCanvas"></canvas>
+</div>
+
+<div id="topbar">
+  <div class="brand-container">
+    <div class="brand-name">Gesture Control</div>
+    <button class="help-toggle" id="helpToggle" title="Toggle Instructions">?</button>
+  </div>
+  <div id="modeSwitcher">
+    <button class="mode-btn active" data-mode="interact">Particle</button>
+    <button class="mode-btn" data-mode="shape">Geometry</button>
+    <button class="mode-btn" data-mode="cursor">Sketch</button>
+  </div>
+  <div class="status-container">
+    <div class="hud-chip"><div class="dot" id="camDot"></div> FPS <span class="hud-val" id="fpsVal">--</span></div>
+    <div class="hud-chip">Targets <span class="hud-val" id="handsVal">0</span></div>
+  </div>
+</div>
+
+<div id="swipeIndicator"><span>🤟</span> SWIPE UNLOCKED</div>
+
+<div id="instructionsPanel">
+  <h3 id="instTitle">Mode Instructions</h3>
+  <ul class="instruction-list" id="instList"></ul>
+</div>
+
+<div id="bottom-toast"><div class="dot active" id="gestDot"></div><span id="gestLabel">Awaiting telemetry...</span></div>
+<div id="center-alert"></div>
+<button id="clearBtn">Clear Canvas</button>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// AUDIO SYNTHESIZER
+// ══════════════════════════════════════════════════════════
+let audioCtx;
+function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playShootSound() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+}
+
+function playExplosionSound() {
+    if (!audioCtx) return;
+    const bufferSize = audioCtx.sampleRate * 0.3; 
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1; 
+    
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+    
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    
+    noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    noise.start();
+}
+
+// ══════════════════════════════════════════════════════════
+// CORE ENGINE & STATE
+// ══════════════════════════════════════════════════════════
+const vid = document.getElementById('vid');
+const fxCanvas = document.getElementById('fxCanvas');
+const drawCanvas = document.getElementById('drawCanvas');
+const fxCtx = fxCanvas.getContext('2d');
+const drCtx = drawCanvas.getContext('2d');
+
+let W = 0, H = 0;
+let vidW = 1280, vidH = 720; 
+
+let rawHands = [], smoothedHands = []; 
+
+const MODES = ['interact', 'shape', 'cursor'];
+let currentModeIndex = 0;
+let mode = MODES[currentModeIndex];
+
+// State & Cooldowns
+let palmXHistory = [];
+let swipeCooldown = 0;
+let colorCooldown = [0, 0];
+
+// Sketch Engine
+let drawPaths = []; 
+let activePaths = [null, null]; // Replaced simple array with object to store custom colors
+let isDrawingArr = [false, false];
+let currentColors = ['#00e5ff', '#ff3366']; // Default starting colors for Hand 1 and Hand 2
+
+// Interaction Engine
+let pinchWas = [false, false];
+let gunCocked = [false, false];
+let chargeLevel = 0;
+let lastSphereCenter = null;
+let sphereVelocity = { x: 0, y: 0 };
+let plasmaBalls = []; 
+let fireballs = []; 
+
+let time = 0, lastT = performance.now();
+let fpsCounter = 0, fpsLast = performance.now();
+let particles = [], ripples = [];
+
+// UI Refs
+const fpsVal = document.getElementById('fpsVal'), handsVal = document.getElementById('handsVal');
+const bottomToast = document.getElementById('bottom-toast'), gestLabel = document.getElementById('gestLabel');
+const centerAlert = document.getElementById('center-alert'), flashOverlay = document.getElementById('flashOverlay');
+const helpToggle = document.getElementById('helpToggle'), instructionsPanel = document.getElementById('instructionsPanel');
+const swipeIndicator = document.getElementById('swipeIndicator');
+const clearBtn = document.getElementById('clearBtn');
+let alertTimer = null;
+
+// UPDATED EXPLICIT INSTRUCTIONS
+const INSTRUCTIONS = {
+  interact: [
+    { icon: '🔫', title: 'Fireball Blaster', desc: 'Make a "Finger Gun" (Index pointing forward, middle/ring/pinky curled down). Point your thumb UP to cock it, tap your thumb DOWN to fire!' },
+    { icon: '🔮', title: 'Plasma Sphere', desc: 'Hold both open palms close together (facing each other). Wait for it to charge 100%, aim, and rapidly pull hands apart to throw!' },
+    { icon: '🤌', title: 'Pinch Gesture', desc: 'Pinch your thumb and finger together to activate the pulse gesture.' },
+    { icon: '🤟', title: 'Secure Swipe (Change Mode)', desc: 'Hold up ONLY your Index and Pinky fingers. A blue badge will appear. Swipe your hand left or right to change modes.' }
+  ],
+  shape: [
+    { icon: '🤲', title: 'Lock Geometry', desc: 'Bring both palms close together, ensuring your index fingers are pointing straight UP towards the ceiling to lock the shape.' },
+    { icon: '🤟', title: 'Secure Swipe (Change Mode)', desc: 'Hold up ONLY your Index and Pinky fingers. Swipe your hand left or right to change modes.' }
+  ],
+  cursor: [
+    { icon: '✍️', title: 'Sketch & Draw', desc: 'Pinch your Thumb and Middle finger together to draw. The Index finger acts as the tip of the pen.' },
+    { icon: '🖐️', title: 'Change Colors', desc: 'Open your hand completely (all 5 fingers extended outward) to instantly change your pen color.' },
+    { icon: '🤟', title: 'Secure Swipe (Change Mode)', desc: 'Hold up ONLY your Index and Pinky fingers. Swipe your hand left or right to change modes.' }
+  ]
+};
+
+// ══════════════════════════════════════════════════════════
+// UTILITIES & MATHEMATICS
+// ══════════════════════════════════════════════════════════
+function resize() {
+  W = window.innerWidth; H = window.innerHeight;
+  fxCanvas.width = W; fxCanvas.height = H;
+  drawCanvas.width = W; drawCanvas.height = H;
+  redrawCanvas(); 
+}
+window.addEventListener('resize', resize); resize();
+
+function lerp(start, end, amt) { return (1 - amt) * start + amt * end; }
+function dist3D(a, b) { return Math.hypot(a.x - b.x, a.y - b.y, (a.z || 0) - (b.z || 0)); }
+
+function getRenderBounds() {
+  const vidAspect = vidW / vidH; const winAspect = W / H;
+  let renderW, renderH, offsetX = 0, offsetY = 0;
+  if (winAspect > vidAspect) { renderW = W; renderH = W / vidAspect; offsetY = (renderH - H) / 2; } 
+  else { renderH = H; renderW = H * vidAspect; offsetX = (renderW - W) / 2; }
+  return { renderW, renderH, offsetX, offsetY };
+}
+
+function lm(pt) { 
+  const b = getRenderBounds();
+  return { x: (pt.x * b.renderW) - b.offsetX, y: (pt.y * b.renderH) - b.offsetY };
+}
+
+function smoothLandmarks(current, previous) {
+  if (!previous || previous.length !== current.length) return current;
+  return current.map((hand, hIdx) => hand.map((pt, lIdx) => {
+    const prevPt = previous[hIdx][lIdx];
+    const velocity = Math.hypot(pt.x - prevPt.x, pt.y - prevPt.y);
+    const factor = Math.min(Math.max(velocity * 20, 0.15), 0.8); 
+    return { x: lerp(prevPt.x, pt.x, factor), y: lerp(prevPt.y, pt.y, factor), z: lerp(prevPt.z || 0, pt.z || 0, factor) };
+  }));
+}
+
+function showAlert(text, color = '#ffffff') {
+  centerAlert.textContent = text; centerAlert.style.color = color;
+  centerAlert.classList.remove('show'); void centerAlert.offsetWidth; 
+  centerAlert.classList.add('show');
+  clearTimeout(alertTimer); alertTimer = setTimeout(() => centerAlert.classList.remove('show'), 1200);
+}
+
+function setStatus(text) { gestLabel.textContent = text; bottomToast.classList.add('show'); }
+function triggerFlash() { flashOverlay.classList.add('flash'); setTimeout(() => flashOverlay.classList.remove('flash'), 50); }
+
+function updateInstructions() {
+  const data = INSTRUCTIONS[mode];
+  document.getElementById('instTitle').textContent = `${mode === 'cursor' ? 'SKETCH' : mode.toUpperCase()} MODE`;
+  document.getElementById('instList').innerHTML = data.map(item => `
+    <li class="instruction-item"><div class="icon-box">${item.icon}</div><div><strong>${item.title}</strong>${item.desc}</div></li>
+  `).join('');
+}
+
+function setMode(index) {
+  if (mode === 'cursor') {
+    if (isDrawingArr[0] && activePaths[0]) drawPaths.push(activePaths[0]);
+    if (isDrawingArr[1] && activePaths[1]) drawPaths.push(activePaths[1]);
+    activePaths = [null, null]; isDrawingArr = [false, false];
+  }
+
+  currentModeIndex = (index + MODES.length) % MODES.length;
+  mode = MODES[currentModeIndex];
+  
+  document.querySelectorAll('.mode-btn').forEach((btn, i) => btn.classList.toggle('active', i === currentModeIndex));
+  clearBtn.classList.toggle('visible', mode === 'cursor');
+  drawCanvas.style.opacity = mode === 'cursor' ? '1' : '0';
+
+  updateInstructions();
+  showAlert(`${mode === 'cursor' ? 'SKETCH' : mode.toUpperCase()}`, '#fff');
+}
+
+// ══════════════════════════════════════════════════════════
+// GESTURE DETECTION MATH
+// ══════════════════════════════════════════════════════════
+function isSwipePose(hand) {
+  const palmSize = dist3D(hand[0], hand[9]); 
+  if (palmSize === 0) return false;
+  const tipIdx = dist3D(hand[8], hand[0]) / palmSize;
+  const tipMid = dist3D(hand[12], hand[0]) / palmSize;
+  const tipRng = dist3D(hand[16], hand[0]) / palmSize;
+  const tipPnk = dist3D(hand[20], hand[0]) / palmSize;
+  return (tipIdx > 1.6 && tipPnk > 1.5 && tipMid < 1.3 && tipRng < 1.3);
+}
+
+function isPointingPose(hand) {
+  const palmSize = dist3D(hand[0], hand[9]); 
+  if (palmSize === 0) return false;
+  const tipIdx = dist3D(hand[8], hand[0]) / palmSize;
+  const tipMid = dist3D(hand[12], hand[0]) / palmSize;
+  const tipRng = dist3D(hand[16], hand[0]) / palmSize;
+  const tipPnk = dist3D(hand[20], hand[0]) / palmSize;
+  // Relaxed constraints for finger gun to ensure it tracks reliably
+  return (tipIdx > 1.4 && tipMid < 1.25 && tipRng < 1.25 && tipPnk < 1.25);
+}
+
+function isOpenHand(hand) {
+  const palmSize = dist3D(hand[0], hand[9]); 
+  if (palmSize === 0) return false;
+  // All fingers extended
+  return (
+    dist3D(hand[8], hand[0]) / palmSize > 1.4 &&
+    dist3D(hand[12], hand[0]) / palmSize > 1.4 &&
+    dist3D(hand[16], hand[0]) / palmSize > 1.4 &&
+    dist3D(hand[20], hand[0]) / palmSize > 1.4
+  );
+}
+
+function detectSwipe(hand) {
+  if (swipeCooldown > 0) { swipeCooldown--; swipeIndicator.classList.remove('active'); return; }
+  if (!isSwipePose(hand)) { palmXHistory = []; swipeIndicator.classList.remove('active'); return; }
+
+  swipeIndicator.classList.add('active');
+  const currentX = hand[0].x; 
+  palmXHistory.push(currentX);
+  if (palmXHistory.length > 12) palmXHistory.shift();
+
+  if (palmXHistory.length === 12) {
+    const deltaX = palmXHistory[11] - palmXHistory[0];
+    if (Math.abs(deltaX) > 0.12) {
+      const direction = deltaX > 0 ? -1 : 1; 
+      setMode(currentModeIndex + direction);
+      triggerFlash(); palmXHistory = []; swipeCooldown = 50; 
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// RENDERERS
+// ══════════════════════════════════════════════════════════
+function spawnRipple(x, y, color) { ripples.push({ x, y, r: 0, maxR: 120, life: 1, color }); }
+function spawnParticles(x, y, color, count = 10) {
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2, s = Math.random() * 5 + 1;
+    particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 1, color });
+  }
+}
+
+function drawLightning(ctx, x1, y1, x2, y2, color) {
+  ctx.beginPath(); ctx.moveTo(x1, y1);
+  const steps = 6;
+  for(let i = 1; i <= steps; i++) {
+      const tx = lerp(x1, x2, i/steps) + (Math.random() - 0.5) * 35;
+      const ty = lerp(y1, y2, i/steps) + (Math.random() - 0.5) * 35;
+      ctx.lineTo(i === steps ? x2 : tx, i === steps ? y2 : ty);
+  }
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.shadowBlur = 15; ctx.shadowColor = color; ctx.stroke(); ctx.shadowBlur = 0;
+}
+
+function drawEffects() {
+  fxCtx.clearRect(0, 0, W, H);
+  
+  for (let i = plasmaBalls.length - 1; i >= 0; i--) {
+    let pb = plasmaBalls[i];
+    pb.x += pb.vx; pb.y += pb.vy;
+    fxCtx.save(); fxCtx.translate(pb.x, pb.y);
+    fxCtx.beginPath(); fxCtx.arc(0, 0, pb.radius * 1.5, 0, Math.PI * 2);
+    fxCtx.fillStyle = 'rgba(0, 229, 255, 0.3)'; fxCtx.shadowBlur = 30; fxCtx.shadowColor = '#00e5ff'; fxCtx.fill();
+    fxCtx.beginPath(); fxCtx.arc(0, 0, pb.radius, 0, Math.PI * 2); fxCtx.fillStyle = '#ffffff'; fxCtx.fill();
+    fxCtx.restore();
+    spawnParticles(pb.x, pb.y, '#00e5ff', 3);
+
+    if (pb.x < -100 || pb.x > W + 100 || pb.y < -100 || pb.y > H + 100) {
+      spawnParticles(pb.x, pb.y, '#b300ff', 50); spawnRipple(pb.x, pb.y, '#00e5ff');
+      playExplosionSound(); plasmaBalls.splice(i, 1);
+    }
+  }
+
+  for (let i = fireballs.length - 1; i >= 0; i--) {
+    let fb = fireballs[i];
+    fb.x += fb.vx; fb.y += fb.vy;
+    
+    const grad = fxCtx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, fb.radius);
+    grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.3, '#ffea00');
+    grad.addColorStop(0.7, 'var(--accent-fire)'); grad.addColorStop(1, 'transparent');
+    
+    fxCtx.beginPath(); fxCtx.arc(fb.x, fb.y, fb.radius, 0, Math.PI * 2);
+    fxCtx.fillStyle = grad; fxCtx.fill();
+    spawnParticles(fb.x, fb.y, 'var(--accent-fire)', 2);
+
+    if (fb.x < -50 || fb.x > W + 50 || fb.y < -50 || fb.y > H + 50) {
+      spawnParticles(fb.x, fb.y, '#ffea00', 25); spawnRipple(fb.x, fb.y, 'var(--accent-fire)');
+      playExplosionSound(); fireballs.splice(i, 1);
+    }
+  }
+
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const r = ripples[i]; r.r += (r.maxR - r.r) * 0.12; r.life -= 0.03;
+    if (r.life <= 0) { ripples.splice(i, 1); continue; }
+    fxCtx.beginPath(); fxCtx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+    fxCtx.strokeStyle = r.color; fxCtx.lineWidth = 2; fxCtx.globalAlpha = r.life; fxCtx.stroke();
+  }
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= 0.02;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    fxCtx.beginPath(); fxCtx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+    fxCtx.fillStyle = p.color; fxCtx.globalAlpha = p.life; fxCtx.fill();
+  }
+  fxCtx.globalAlpha = 1;
+}
+
+function drawSkeleton(hand, color) {
+  fxCtx.save();
+  const CONN = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
+  fxCtx.shadowBlur = 12; fxCtx.shadowColor = color;
+  CONN.forEach(([a, b]) => {
+    const pa = lm(hand[a]), pb = lm(hand[b]);
+    fxCtx.beginPath(); fxCtx.moveTo(pa.x, pa.y); fxCtx.lineTo(pb.x, pb.y);
+    fxCtx.strokeStyle = 'rgba(255,255,255,0.25)'; fxCtx.lineWidth = 1.5; fxCtx.stroke();
+  });
+  [4, 8, 12, 16, 20].forEach(tip => {
+    const pt = lm(hand[tip]);
+    fxCtx.beginPath(); fxCtx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
+    fxCtx.fillStyle = color; fxCtx.fill();
+  });
+  fxCtx.restore();
+}
+
+function renderPath(pathObj) {
+  if (!pathObj || !pathObj.points || pathObj.points.length < 2) return;
+  const pts = pathObj.points;
+  
+  drCtx.beginPath(); 
+  const p0 = lm(pts[0]); drCtx.moveTo(p0.x, p0.y);
+  for (let i = 1; i < pts.length; i++) {
+    const pPrev = lm(pts[i - 1]), pCurr = lm(pts[i]);
+    const xc = (pCurr.x + pPrev.x) / 2, yc = (pCurr.y + pPrev.y) / 2;
+    drCtx.quadraticCurveTo(pPrev.x, pPrev.y, xc, yc);
+  }
+  const pLast = lm(pts[pts.length - 1]);
+  drCtx.lineTo(pLast.x, pLast.y);
+  drCtx.strokeStyle = pathObj.color; drCtx.lineWidth = 6; drCtx.lineCap = 'round';
+  drCtx.shadowBlur = 10; drCtx.shadowColor = pathObj.color; drCtx.stroke(); drCtx.shadowBlur = 0;
+}
+
+function redrawCanvas() {
+  drCtx.clearRect(0, 0, W, H);
+  drawPaths.forEach(p => renderPath(p));
+  if (activePaths[0]) renderPath(activePaths[0]);
+  if (activePaths[1]) renderPath(activePaths[1]);
+}
+
+// ══════════════════════════════════════════════════════════
+// ACTION LOGIC
+// ══════════════════════════════════════════════════════════
+let heartWas = false;
+
+function processGestures() {
+  if (!smoothedHands.length) { 
+    setStatus('System Idle'); swipeIndicator.classList.remove('active'); 
+    chargeLevel = Math.max(0, chargeLevel - 5);
+    return; 
+  }
+
+  detectSwipe(smoothedHands[0]);
+  let anyPinching = false;
+  let isChargingSphere = false;
+  let isGunActive = false;
+  let isColorChanging = false;
+
+  // Decrease color cycle cooldown
+  colorCooldown[0] = Math.max(0, colorCooldown[0] - 1);
+  colorCooldown[1] = Math.max(0, colorCooldown[1] - 1);
+
+  // ── SUPERPOWER LOGIC (CHARGE AND THROW SPHERE) ──
+  if (mode === 'interact' && smoothedHands.length >= 2) {
+      const h1 = smoothedHands[0], h2 = smoothedHands[1];
+      const palmsDist = dist3D(h1[0], h2[0]);
+      
+      if (palmsDist < 0.35 && palmsDist > 0.05) {
+          isChargingSphere = true;
+          chargeLevel = Math.min(chargeLevel + 2, 100);
+          
+          const p1 = lm(h1[0]), p2 = lm(h2[0]);
+          const cx = (p1.x + p2.x) / 2; const cy = (p1.y + p2.y) / 2;
+
+          if (lastSphereCenter) {
+              sphereVelocity = { x: cx - lastSphereCenter.x, y: cy - lastSphereCenter.y };
+          }
+          lastSphereCenter = { x: cx, y: cy };
+
+          const radius = (20 + chargeLevel * 0.4) + Math.sin(time * 15) * 8;
+          
+          fxCtx.save(); fxCtx.translate(cx, cy);
+          fxCtx.beginPath(); fxCtx.arc(0, 0, radius * 1.8, 0, Math.PI * 2);
+          const outerGrad = fxCtx.createRadialGradient(0,0, radius, 0,0, radius*1.8);
+          outerGrad.addColorStop(0, 'rgba(0, 229, 255, 0.4)'); outerGrad.addColorStop(1, 'transparent');
+          fxCtx.fillStyle = outerGrad; fxCtx.fill();
+
+          fxCtx.rotate(time * 5); fxCtx.beginPath(); fxCtx.arc(0, 0, radius, 0, Math.PI * 2);
+          const coreGrad = fxCtx.createRadialGradient(0,0,0, 0,0,radius);
+          coreGrad.addColorStop(0, '#ffffff'); coreGrad.addColorStop(0.5, '#00e5ff'); coreGrad.addColorStop(1, '#b300ff');
+          fxCtx.fillStyle = coreGrad; fxCtx.shadowBlur = 30; fxCtx.shadowColor = '#00e5ff'; fxCtx.fill();
+
+          fxCtx.strokeStyle = '#ffffff'; fxCtx.lineWidth = 3; fxCtx.globalAlpha = 0.8;
+          fxCtx.beginPath(); fxCtx.ellipse(0, 0, radius * 1.5, radius * 0.5, time * 2, 0, Math.PI * 2); fxCtx.stroke();
+          fxCtx.strokeStyle = '#00e5ff';
+          fxCtx.beginPath(); fxCtx.ellipse(0, 0, radius * 1.6, radius * 0.4, -time * 2.5, 0, Math.PI * 2); fxCtx.stroke();
+          fxCtx.restore();
+
+          const fingers = [8, 12, 16, 20]; 
+          fingers.forEach(tip => {
+             if(Math.random() > 0.6) drawLightning(fxCtx, lm(h1[tip]).x, lm(h1[tip]).y, cx, cy, '#00e5ff');
+             if(Math.random() > 0.6) drawLightning(fxCtx, lm(h2[tip]).x, lm(h2[tip]).y, cx, cy, '#b300ff');
+          });
+
+          if (Math.random() > 0.1) spawnParticles(cx + (Math.random() - 0.5)*150, cy + (Math.random() - 0.5)*150, '#00e5ff', 3);
+          setStatus(`Charging Power... ${Math.floor(chargeLevel)}%`);
+      }
+  }
+
+  // ── DETECT SPHERE THROW ──
+  if (mode === 'interact' && !isChargingSphere && chargeLevel > 20 && lastSphereCenter) {
+      let vx = sphereVelocity.x * 2.5; let vy = sphereVelocity.y * 2.5;
+      if (Math.hypot(vx, vy) < 8) vy = -20; 
+      plasmaBalls.push({ x: lastSphereCenter.x, y: lastSphereCenter.y, vx: vx, vy: vy, radius: 15 + chargeLevel * 0.3 });
+      playShootSound(); showAlert('PLASMA LAUNCHED!', '#00e5ff'); triggerFlash();
+      chargeLevel = 0; lastSphereCenter = null;
+  } else if (!isChargingSphere) {
+      chargeLevel = Math.max(0, chargeLevel - 5); lastSphereCenter = null;
+  }
+
+  smoothedHands.forEach((hand, i) => {
+    const palmSize3D = dist3D(hand[0], hand[9]);
+
+    if (mode === 'interact') {
+      drawSkeleton(hand, '#00e5ff');
+      
+      if (!isChargingSphere) {
+          const isPinching = (dist3D(hand[4], hand[8]) / palmSize3D) < 0.40;
+          if (isPinching) anyPinching = true;
+
+          // ── FIREBALL GUN LOGIC ──
+          if (isPointingPose(hand) && !isPinching) {
+            isGunActive = true;
+            
+            const thumbDist = dist3D(hand[4], hand[5]) / palmSize3D;
+            // Relaxed thresholds for easy trigger
+            const isThumbUp = thumbDist > 0.5; 
+            const isThumbDown = thumbDist < 0.4; 
+
+            const thumbPx = lm(hand[4]); const indexPx = lm(hand[8]);
+
+            if (isThumbUp) {
+                gunCocked[i] = true;
+                fxCtx.beginPath(); fxCtx.arc(thumbPx.x, thumbPx.y, 12, 0, Math.PI*2);
+                fxCtx.fillStyle = '#ffffff'; fxCtx.shadowBlur = 20; fxCtx.shadowColor = 'var(--accent-fire)'; fxCtx.fill(); fxCtx.shadowBlur = 0;
+                setStatus('Gun Cocked... Drop thumb to shoot!');
+            } else if (isThumbDown && gunCocked[i]) {
+                gunCocked[i] = false;
+                playShootSound();
+                
+                const pBase = lm(hand[5]); 
+                const dx = indexPx.x - pBase.x; 
+                const dy = indexPx.y - pBase.y;
+                const len = Math.hypot(dx, dy) || 1;
+                
+                const speed = 35; 
+                fireballs.push({ x: indexPx.x, y: indexPx.y, vx: (dx / len) * speed, vy: (dy / len) * speed, radius: 25 });
+                
+                spawnParticles(indexPx.x, indexPx.y, 'var(--accent-fire)', 15);
+                spawnRipple(indexPx.x, indexPx.y, 'var(--accent-fire)');
+                showAlert('FIRE!', 'var(--accent-fire)');
+            }
+            
+            fxCtx.beginPath(); fxCtx.arc(indexPx.x, indexPx.y, 8, 0, Math.PI*2);
+            fxCtx.strokeStyle = 'var(--accent-fire)'; fxCtx.lineWidth = 2; fxCtx.stroke();
+          } else {
+            gunCocked[i] = false; 
+          }
+
+          if (isPinching && !pinchWas[i]) {
+            const pt = lm(hand[8]);
+            spawnRipple(pt.x, pt.y, '#00e5ff'); spawnParticles(pt.x, pt.y, '#fff', 20);
+            showAlert('PULSE', '#00e5ff');
+          }
+          pinchWas[i] = isPinching;
+      }
+    }
+
+    if (mode === 'cursor') {
+      const indexPx = lm(hand[8]); const thumbPx = lm(hand[4]); const midPx = lm(hand[12]);
+      const indexNorm = { x: hand[8].x, y: hand[8].y };
+
+      // ── COLOR CHANGING LOGIC ──
+      if (isOpenHand(hand)) {
+          isColorChanging = true;
+          if (colorCooldown[i] <= 0) {
+              const hue = Math.floor(Math.random() * 360);
+              currentColors[i] = `hsl(${hue}, 100%, 60%)`;
+              colorCooldown[i] = 40; // Cooldown to prevent hyper-flashing
+              
+              const palmCenter = lm(hand[9]);
+              spawnRipple(palmCenter.x, palmCenter.y, currentColors[i]);
+              spawnParticles(palmCenter.x, palmCenter.y, currentColors[i], 15);
+              showAlert('NEW COLOR', currentColors[i]);
+          }
+          
+          // Show skeleton with new color while hand is open
+          drawSkeleton(hand, currentColors[i]);
+          setStatus('Color Updated! Pinch to sketch.');
+          
+          // Stop drawing if hand opened
+          if (isDrawingArr[i] && activePaths[i] && activePaths[i].points.length > 2) {
+             drawPaths.push(activePaths[i]);
+          }
+          activePaths[i] = null; isDrawingArr[i] = false;
+      } else {
+          // Normal Drawing Logic
+          const pulseR = 10 + Math.sin(time * 10) * 3;
+          fxCtx.beginPath(); fxCtx.arc(indexPx.x, indexPx.y, pulseR, 0, Math.PI*2);
+          fxCtx.strokeStyle = currentColors[i]; fxCtx.lineWidth = 2; fxCtx.stroke();
+          
+          fxCtx.beginPath(); fxCtx.arc(indexPx.x, indexPx.y, 6, 0, Math.PI*2);
+          fxCtx.fillStyle = '#fff'; fxCtx.shadowBlur = 15; fxCtx.shadowColor = currentColors[i]; fxCtx.fill(); fxCtx.shadowBlur = 0;
+
+          // Transparent Thumb/Middle trackers
+          fxCtx.beginPath(); fxCtx.arc(thumbPx.x, thumbPx.y, 5, 0, Math.PI*2); fxCtx.fillStyle = 'rgba(255,255,255, 0.4)'; fxCtx.fill();
+          fxCtx.beginPath(); fxCtx.arc(midPx.x, midPx.y, 5, 0, Math.PI*2); fxCtx.fillStyle = 'rgba(255,255,255, 0.4)'; fxCtx.fill();
+
+          const isDrawingAction = (dist3D(hand[4], hand[12]) / palmSize3D) < 0.40; 
+          
+          if (isDrawingAction) {
+            if (!isDrawingArr[i]) { 
+                activePaths[i] = { color: currentColors[i], points: [indexNorm] }; 
+                isDrawingArr[i] = true; 
+                spawnRipple(indexPx.x, indexPx.y, currentColors[i]); 
+            } else { 
+                const lastNorm = activePaths[i].points[activePaths[i].points.length-1];
+                const distMoved = Math.hypot(indexNorm.x - lastNorm.x, indexNorm.y - lastNorm.y);
+                
+                if(distMoved > 0.005 && distMoved < 0.15) {
+                    activePaths[i].points.push(indexNorm); 
+                } else if (distMoved >= 0.15) {
+                    drawPaths.push(activePaths[i]);
+                    activePaths[i] = { color: currentColors[i], points: [indexNorm] };
+                }
+            }
+          } else {
+            if (isDrawingArr[i] && activePaths[i] && activePaths[i].points.length > 2) drawPaths.push(activePaths[i]);
+            activePaths[i] = null; isDrawingArr[i] = false;
+          }
+      }
+      
+      if (!isColorChanging) {
+         setStatus((isDrawingArr[0] || isDrawingArr[1]) ? 'Dual Sketching...' : 'Tracking Cursor');
+      }
+      redrawCanvas();
+    }
+  });
+
+  if (mode === 'interact' && !isChargingSphere) {
+    if (smoothedHands.length >= 2) {
+      const h1 = smoothedHands[0], h2 = smoothedHands[1];
+      const links = [{ id: 4, c: '#ff3366' }, { id: 8, c: '#00e5ff' }, { id: 12, c: '#b300ff' }, { id: 16, c: '#e5c07b' }, { id: 20, c: '#00ff9d' }];
+
+      fxCtx.save(); fxCtx.lineWidth = 2.5;
+      const pulse = (Math.sin(time * 6) + 1) / 2 * 0.5 + 0.5; 
+      
+      links.forEach(link => {
+        const p1 = lm(h1[link.id]), p2 = lm(h2[link.id]);
+        fxCtx.beginPath(); fxCtx.moveTo(p1.x, p1.y); fxCtx.lineTo(p2.x, p2.y);
+        fxCtx.strokeStyle = link.c; fxCtx.shadowBlur = 15; fxCtx.shadowColor = link.c;
+        fxCtx.globalAlpha = pulse; fxCtx.stroke();
+        
+        const cx = (p1.x + p2.x) / 2, cy = (p1.y + p2.y) / 2;
+        fxCtx.globalAlpha = 1; fxCtx.beginPath(); fxCtx.arc(cx, cy, 3.5, 0, Math.PI * 2);
+        fxCtx.fillStyle = '#ffffff'; fxCtx.shadowBlur = 20; fxCtx.shadowColor = link.c; fxCtx.fill();
+        if (Math.random() > 0.95) spawnParticles(cx, cy, link.c, 1);
+      });
+      fxCtx.restore();
+
+      if (!anyPinching && !isGunActive) setStatus('Energy Bridge Established');
+    } else if (!isGunActive && !anyPinching && chargeLevel === 0) setStatus('Tracking Hand');
+    else if (!isGunActive && anyPinching) setStatus('Pulse Triggered');
+  }
+
+  if (mode === 'shape') {
+    smoothedHands.forEach(hand => drawSkeleton(hand, '#e5c07b'));
+    if (smoothedHands.length >= 2) {
+      const h1 = smoothedHands[0], h2 = smoothedHands[1];
+      const currentDist = dist3D(h1[0], h2[0]);
+      const indexUp = h1[8].y < h1[5].y && h2[8].y < h2[5].y;
+      const isCloseEnough = heartWas ? (currentDist < 0.35) : (currentDist < 0.25);
+      
+      if (isCloseEnough && indexUp) {
+        if (!heartWas) {
+           const center = lm({ x: (h1[0].x + h2[0].x)/2, y: (h1[0].y + h2[0].y)/2 });
+           spawnParticles(center.x, center.y, '#ff3366', 40);
+           showAlert('GEOMETRY LOCKED', '#ff3366'); triggerFlash();
+        }
+        heartWas = true; setStatus('Geometry Locked');
+      } else { heartWas = false; setStatus('Align palms to form shape'); }
+    } else { setStatus('Requires Dual Tracking'); }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// INIT & LOOP
+// ══════════════════════════════════════════════════════════
+function renderLoop(ts) {
+  requestAnimationFrame(renderLoop);
+  time += (ts - lastT) / 1000; lastT = ts;
+
+  if (ts - fpsLast > 1000) {
+    fpsVal.textContent = fpsCounter; fpsCounter = 0; fpsLast = ts;
+    document.getElementById('camDot').classList.toggle('active', true);
+  }
+  fpsCounter++;
+
+  let sortedHands = [];
+  if (rawHands.length === 1) { sortedHands = [rawHands[0]]; }
+  else if (rawHands.length >= 2) { sortedHands = rawHands.sort((a, b) => a[0].x - b[0].x); }
+
+  smoothedHands = smoothLandmarks(sortedHands, smoothedHands);
+  drawEffects();
+  processGestures();
+}
+
+document.querySelectorAll('.mode-btn').forEach((btn, index) => btn.addEventListener('click', () => setMode(index)));
+
+clearBtn.addEventListener('click', () => { 
+  drawPaths = []; activePaths = [null, null]; redrawCanvas(); triggerFlash(); showAlert('CLEARED', '#ff3366'); 
+});
+
+helpToggle.addEventListener('click', () => { 
+  helpToggle.classList.toggle('active'); instructionsPanel.classList.toggle('show'); 
+});
+
+async function initSensors() {
+  const mpHands = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+  mpHands.setOptions({ maxNumHands: 2, modelComplexity: 1, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
+  mpHands.onResults(res => { rawHands = res.multiHandLandmarks || []; handsVal.textContent = rawHands.length; });
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } });
+    vid.srcObject = stream;
+    vid.addEventListener('loadedmetadata', () => {
+      vidW = vid.videoWidth || W; vidH = vid.videoHeight || H; vid.play();
+    });
+  } catch(e) { console.warn('Camera err', e); }
+
+  const cam = new Camera(vid, { onFrame: async () => await mpHands.send({ image: vid }), width: 1280, height: 720 });
+  cam.start();
+}
+
+document.getElementById('enterBtn').addEventListener('click', () => {
+  initAudio(); 
+  document.getElementById('splash').classList.add('out');
+  updateInstructions(); 
+  setTimeout(() => {
+    document.getElementById('topbar').classList.add('visible');
+    instructionsPanel.classList.add('show'); helpToggle.classList.add('active'); 
+    initSensors(); requestAnimationFrame(renderLoop);
+  }, 400);
+});
+</script>
+</body>
+</html>
