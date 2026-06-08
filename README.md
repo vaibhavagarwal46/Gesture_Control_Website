@@ -49,3 +49,9 @@ Experience it live here: [https://gesture-control-website.netlify.app](https://g
 1. Clone this repository.
 2. Open `index.html` in a modern web browser (Works best on Google Chrome).
 3. Allow camera access when prompted and enjoy.
+
+---
+
+## Made by
+- **Vaibhav Agarwal** 
+- [LinkedIn Profile](https://www.linkedin.com/in/vaibhavagarwal46)
