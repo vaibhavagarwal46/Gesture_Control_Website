@@ -9,6 +9,7 @@ Experience it live here: [https://gesture-control-website.netlify.app](https://g
 
 ## Features
 - **Gesture-Based Navigation:** Switch between interaction modes using the "Rock On" (🤟) lock-gesture and a horizontal swipe.
+- **Live Image Puzzle:** Take a snapshot of your webcam feed and solve a 3x3 sliding puzzle using intuitive pinch-and-drag hand controls.
 - **Particle Interaction:** Engage with real-time particle systems.
 - **Dual-Wield Sketching:** Sketch in 3D space using both hands simultaneously with customizable colors.
 - **Superpowers:** - **Plasma Sphere:** Charge energy by bringing palms together and launch it with a rapid pull.
@@ -34,6 +35,8 @@ Experience it live here: [https://gesture-control-website.netlify.app](https://g
 | **Geometry** | Both palms together | Align index fingers up to lock geometry. |
 | **Sketch** | Thumb & Middle Pinch | Sketch on the canvas. |
 | **Sketch** | Open Hand (5 fingers) | Change pen color. |
+| **Puzzle** | Click Start/Restart | Take a camera snapshot and shuffle the grid. |
+| **Puzzle** | Pinch (Index+Thumb) & Drag | Slide a neighboring puzzle piece into the empty slot. |
 
 ---
 

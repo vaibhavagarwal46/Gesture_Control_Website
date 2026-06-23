@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Gesture Control Website</title>
+  <title>Gesture Control| Precision Engine</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,10 +14,11 @@
 
   <style>
     :root {
-      --bg: #050507;
-      --surface: rgba(255, 255, 255, 0.05);
-      --surface-hover: rgba(255, 255, 255, 0.1);
-      --border: rgba(255, 255, 255, 0.1);
+      --bg: #03030a;
+      --surface: rgba(255,255,255,0.04);
+      --surface-hover: rgba(255,255,255,0.09);
+      --border: rgba(255,255,255,0.08);
+      --border-bright: rgba(0,229,255,0.25);
       --accent-cyan: #00e5ff;
       --accent-purple: #b300ff;
       --accent-gold: #e5c07b;
@@ -25,162 +26,450 @@
       --accent-green: #00ff9d;
       --accent-fire: #ff6a00;
       --text-main: #ffffff;
-      --text-muted: rgba(255, 255, 255, 0.6);
-      
+      --text-muted: rgba(255,255,255,0.5);
       --font-sans: 'Inter', sans-serif;
       --font-mono: 'JetBrains Mono', monospace;
+      --glow-cyan: 0 0 20px rgba(0,229,255,0.4), 0 0 60px rgba(0,229,255,0.15);
+      --glow-purple: 0 0 20px rgba(179,0,255,0.4), 0 0 60px rgba(179,0,255,0.15);
     }
 
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
     body {
       font-family: var(--font-sans); background: var(--bg); color: var(--text-main);
-      overflow: hidden; width: 100vw; height: 100vh; -webkit-font-smoothing: antialiased;
+      overflow: hidden; width:100vw; height:100vh; -webkit-font-smoothing: antialiased;
     }
 
-    /* ── SPLASH SCREEN ─────────────────────────────────── */
+    /* ── SPLASH ── */
     #splash {
       position: fixed; inset: 0; z-index: 200; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; text-align: center; padding: 20px;
-      background: radial-gradient(circle at 50% 50%, rgba(0, 229, 255, 0.05) 0%, var(--bg) 70%);
-      transition: opacity 0.6s ease, transform 0.6s ease;
+      align-items: center; justify-content: center; text-align: center; padding: 0px;
+      transition: opacity 0.8s ease, transform 0.8s ease;
+      overflow: hidden;
     }
-    #splash.out { opacity: 0; pointer-events: none; transform: scale(1.05); }
+    #splash::before {
+      content: ''; position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 100%, rgba(179,0,255,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 50% at 20% 20%, rgba(0,229,255,0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 80% 80%, rgba(0,229,255,0.06) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    #splash.out { opacity: 0; pointer-events: none; transform: scale(1.04); }
+
+    /* animated grid background on splash */
+    #splash-grid {
+      position: absolute; inset: 0; pointer-events: none;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.04) 1px, transparent 1px);
+      background-size: 60px 60px;
+      animation: gridPan 20s linear infinite;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%);
+    }
+    @keyframes gridPan { from { transform: translateY(0); } to { transform: translateY(60px); } }
+
+    /* floating orbs */
+    .splash-orb {
+      position: absolute; border-radius: 50%; pointer-events: none; filter: blur(80px);
+      animation: orbFloat 8s ease-in-out infinite;
+    }
+    .splash-orb-1 { width:400px; height:400px; background:rgba(179,0,255,0.12); top:-100px; left:-100px; animation-delay:0s; }
+    .splash-orb-2 { width:300px; height:300px; background:rgba(0,229,255,0.1); bottom:-80px; right:-80px; animation-delay:-3s; }
+    .splash-orb-3 { width:200px; height:200px; background:rgba(0,255,157,0.06); top:40%; left:70%; animation-delay:-5s; }
+    @keyframes orbFloat {
+      0%,100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-30px) scale(1.08); }
+    }
+
+    /* splash badge */
+    .splash-badge {
+      font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.35em;
+      color: var(--accent-cyan); text-transform: uppercase;
+      border: 1px solid rgba(0,229,255,0.3); border-radius: 100px;
+      padding: 6px 16px; margin-bottom: 32px;
+      background: rgba(0,229,255,0.06);
+      animation: badgePulse 3s ease-in-out infinite;
+      position: relative; z-index: 1;
+    }
+    @keyframes badgePulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(0,229,255,0.2); }
+      50% { box-shadow: 0 0 0 8px rgba(0,229,255,0); }
+    }
 
     .splash-logo {
-      font-weight: 800; font-size: clamp(2.5rem, 8vw, 6rem); letter-spacing: -0.04em;
-      background: linear-gradient(135deg, #fff 0%, var(--text-muted) 100%);
-      background-clip: text; -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent; margin-bottom: 8px;
+      font-weight: 800; font-size: clamp(3rem, 10vw, 7.5rem); letter-spacing: -0.05em;
+      line-height: 1; margin-bottom: 24px; position: relative; z-index: 1;
+      background: linear-gradient(135deg, #fff 0%, rgba(0,229,255,0.9) 50%, rgba(179,0,255,0.8) 100%);
+      -webkit-background-clip: text; 
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 40px rgba(0,229,255,0.3));
     }
-    .splash-sub {
-      font-family: var(--font-mono); font-size: clamp(0.6rem, 2vw, 0.8rem); letter-spacing: 0.3em;
-      color: var(--accent-cyan); text-transform: uppercase; margin-bottom: 50px;
+
+    .splash-logo-sub {
+      font-weight: 400; font-size: clamp(0.5rem, 3vw, 3.5rem); letter-spacing: -0.05em;
+      line-height: 1; margin-bottom: 24px; position: relative; z-index: 1;
+      background: linear-gradient(135deg, #fff 0%, rgba(0,229,255,0.9) 50%, rgba(179,0,255,0.8) 100%);
+      -webkit-background-clip: text; 
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 40px rgba(0,229,255,0.3));
     }
+
+    .splash-desc {
+      font-size: clamp(0.85rem, 2vw, 1.05rem); color: var(--text-muted); max-width: 480px;
+      line-height: 1.7; margin-bottom: 48px; position: relative; z-index: 1;
+    }
+    .splash-desc em { color: var(--accent-cyan); font-style: normal; }
+
+    /* feature pills */
+    .splash-features {
+      display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+      margin-bottom: 48px; position: relative; z-index: 1;
+    }
+    .feature-pill {
+      font-family: var(--font-mono); font-size: 0.7rem; font-weight: 700;
+      padding: 7px 14px; border-radius: 100px; letter-spacing: 0.05em;
+      border: 1px solid var(--border); background: var(--surface);
+      color: var(--text-muted); transition: all 0.3s ease;
+    }
+    .feature-pill:hover { border-color: var(--accent-cyan); color: var(--accent-cyan); background: rgba(0,229,255,0.08); }
+    .feature-pill.pill-cyan { border-color: rgba(0,229,255,0.3); color: var(--accent-cyan); background: rgba(0,229,255,0.06); }
+    .feature-pill.pill-purple { border-color: rgba(179,0,255,0.3); color: var(--accent-purple); background: rgba(179,0,255,0.06); }
+    .feature-pill.pill-green { border-color: rgba(0,255,157,0.3); color: var(--accent-green); background: rgba(0,255,157,0.06); }
+    .feature-pill.pill-gold { border-color: rgba(229,192,123,0.3); color: var(--accent-gold); background: rgba(229,192,123,0.06); }
 
     .enter-btn {
-      padding: 16px 48px; font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700;
-      color: var(--bg); background: var(--text-main); border: none; border-radius: 4px;
-      cursor: pointer; transition: all 0.3s ease;
+      position: relative; z-index: 1;
+      padding: 12px 40px; font-family: var(--font-mono); font-size: 0.9rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--bg); background: var(--accent-cyan); border: none; border-radius: 3px;
+      cursor: pointer; transition: all 0.4s ease; overflow: hidden;
     }
-    .enter-btn:hover { background: var(--accent-cyan); box-shadow: 0 0 30px rgba(0, 229, 255, 0.3); }
+    .enter-btn::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 100%);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .enter-btn::after {
+      content: ''; position: absolute; top: 50%; left: 50%;
+      width: 0; height: 0; background: rgba(255,255,255,0.3);
+      border-radius: 50%; transform: translate(-50%,-50%);
+      transition: width 0.6s ease, height 0.6s ease, opacity 0.6s ease;
+    }
+    .enter-btn:hover { box-shadow: var(--glow-cyan); transform: translateY(-2px); }
+    .enter-btn:hover::before { opacity: 1; }
+    .enter-btn:active::after { width: 300px; height: 300px; opacity: 0; }
 
-    /* ── CANVASES ──────────────────────────────── */
+    .splash-hint {
+      position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+      font-family: var(--font-mono); font-size: 0.65rem; color: rgba(255,255,255,0.2);
+      letter-spacing: 0.15em; text-transform: uppercase; z-index: 1;
+      animation: hintFade 2s ease-in-out infinite;
+    }
+    @keyframes hintFade { 0%,100%{opacity:0.4;} 50%{opacity:0.8;} }
+
+    /* ── VIDEO / CANVAS ── */
     #videoWrap { position: fixed; inset: 0; z-index: 0; }
     video {
       position: absolute; inset: 0; width: 100%; height: 100%;
-      object-fit: cover; transform: scaleX(-1); 
-      filter: grayscale(0.5) brightness(0.6) contrast(1.1);
+      object-fit: cover; transform: scaleX(-1);
+      filter: grayscale(0.4) brightness(0.55) contrast(1.15) saturate(0.8);
     }
     canvas { position: absolute; inset: 0; width: 100%; height: 100%; transform: scaleX(-1); }
-    #fxCanvas { z-index: 2; } 
+    #fxCanvas { z-index: 2; }
     #drawCanvas { z-index: 3; transition: opacity 0.3s ease; }
 
-    /* ── UI OVERLAYS ────────────────────────────────────────── */
+    /* ── TOPBAR ── */
     #topbar {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between; padding: 24px 40px;
-      background: linear-gradient(180deg, rgba(5,5,7,0.9) 0%, transparent 100%);
+      display: flex; align-items: center; justify-content: space-between; padding: 18px 32px;
+      background: linear-gradient(180deg, rgba(3,3,10,0.95) 0%, rgba(3,3,10,0.4) 80%, transparent 100%);
       opacity: 0; transition: opacity 0.5s ease 0.2s;
+      border-bottom: 1px solid transparent;
     }
-    #topbar.visible { opacity: 1; }
+    #topbar.visible { opacity: 1; border-bottom-color: var(--border); }
 
-    .brand-container { display: flex; align-items: center; gap: 16px; }
-    .brand-name { font-weight: 700; font-size: 1.1rem; letter-spacing: 0.05em; }
-    
+    .brand-container { display: flex; align-items: center; gap: 14px; }
+    .brand-logo-mark {
+      width: 32px; height: 32px; border-radius: 6px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 900; color: #fff; letter-spacing: -0.05em;
+      box-shadow: var(--glow-cyan); flex-shrink: 0;
+    }
+    .brand-name {
+      font-weight: 700; font-size: 1rem; letter-spacing: 0.08em;
+      background: linear-gradient(90deg, #fff, rgba(0,229,255,0.8));
+      -webkit-background-clip: text; 
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
     .help-toggle {
-      width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border);
-      background: var(--surface); color: var(--text-main); font-family: var(--font-mono);
-      font-size: 1rem; cursor: pointer; transition: 0.3s;
+      width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text-muted); font-family: var(--font-mono);
+      font-size: 0.85rem; cursor: pointer; transition: 0.25s;
       display: flex; align-items: center; justify-content: center;
     }
-    .help-toggle:hover, .help-toggle.active { background: var(--accent-cyan); color: var(--bg); border-color: var(--accent-cyan); }
-
-    #modeSwitcher { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px; backdrop-filter: blur(10px); }
-    .mode-btn {
-      padding: 8px 24px; font-family: var(--font-sans); font-size: 0.85rem; font-weight: 600;
-      color: var(--text-muted); background: transparent; border: none; border-radius: 4px; cursor: pointer; transition: 0.3s;
+    .help-toggle:hover, .help-toggle.active {
+      background: var(--accent-cyan); color: var(--bg); border-color: var(--accent-cyan);
+      box-shadow: var(--glow-cyan);
     }
-    .mode-btn.active { background: rgba(255,255,255,0.15); color: var(--text-main); }
+
+    #modeSwitcher {
+      display: flex; gap: 2px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+      border-radius: 8px; padding: 3px; backdrop-filter: blur(16px);
+    }
+    .mode-btn {
+      padding: 7px 20px; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--text-muted); background: transparent; border: none;
+      border-radius: 6px; cursor: pointer; transition: all 0.25s;
+    }
+    .mode-btn.active {
+      background: linear-gradient(135deg, rgba(0,229,255,0.15), rgba(179,0,255,0.1));
+      color: var(--accent-cyan); box-shadow: inset 0 0 0 1px rgba(0,229,255,0.2);
+    }
     .mode-btn:hover:not(.active) { color: var(--text-main); background: var(--surface-hover); }
 
-    .status-container { display: flex; gap: 12px; }
+    .status-container { display: flex; gap: 8px; }
     .hud-chip {
-      display: flex; align-items: center; gap: 8px; padding: 8px 16px;
-      background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
-      font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-muted); backdrop-filter: blur(10px);
+      display: flex; align-items: center; gap: 8px; padding: 7px 14px;
+      background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px;
+      font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted);
+      backdrop-filter: blur(12px); transition: border-color 0.3s;
     }
-    .hud-val { color: var(--text-main); font-weight: 700; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: 0.3s; }
-    .dot.active { background: var(--accent-cyan); box-shadow: 0 0 10px var(--accent-cyan); }
+    .hud-chip:hover { border-color: var(--border-bright); }
+    .hud-val { color: var(--accent-cyan); font-weight: 700; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--border); transition: 0.3s; }
+    .dot.active {
+      background: var(--accent-cyan); box-shadow: 0 0 8px var(--accent-cyan);
+      animation: dotPulse 1.5s ease-in-out infinite;
+    }
+    @keyframes dotPulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
 
-    /* ── INDICATORS & PANELS ──────────────────────────────── */
+    /* ── SWIPE INDICATOR ── */
     #swipeIndicator {
-      position: fixed; top: 100px; left: 50%; transform: translateX(-50%);
-      z-index: 120; padding: 10px 24px;
-      background: rgba(0, 229, 255, 0.15); border: 1px solid var(--accent-cyan);
-      border-radius: 50px; font-family: var(--font-mono); font-size: 0.85rem;
-      font-weight: 700; color: var(--accent-cyan); letter-spacing: 0.1em;
-      backdrop-filter: blur(10px); box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+      position: fixed; top: 90px; left: 50%; transform: translateX(-50%);
+      z-index: 120; padding: 9px 22px;
+      background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.4);
+      border-radius: 50px; font-family: var(--font-mono); font-size: 0.8rem;
+      font-weight: 700; color: var(--accent-cyan); letter-spacing: 0.12em;
+      backdrop-filter: blur(12px); box-shadow: var(--glow-cyan);
       opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease;
       pointer-events: none; display: flex; align-items: center; gap: 10px; white-space: nowrap;
     }
     #swipeIndicator.active { opacity: 1; transform: translateX(-50%) scale(1.05); }
 
+    /* ── INSTRUCTIONS PANEL ── */
     #instructionsPanel {
-      position: fixed; top: 100px; left: 40px; z-index: 150; width: 380px;
-      background: rgba(10, 10, 15, 0.85); border: 1px solid var(--border); border-radius: 8px;
-      padding: 24px; backdrop-filter: blur(20px); transform: translateX(-120vw);
-      opacity: 0; transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+      position: fixed; top: 90px; left: 32px; z-index: 150; width: 320px;
+      background: rgba(5,5,15,0.9); border: 1px solid var(--border); border-radius: 12px;
+      padding: 22px; backdrop-filter: blur(24px); transform: translateX(-120vw);
+      opacity: 0; transition: transform 0.45s cubic-bezier(0.16,1,0.3,1), opacity 0.45s ease;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.6);
     }
     #instructionsPanel.show { transform: translateX(0); opacity: 1; }
-    #instructionsPanel h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.2em; color: var(--accent-cyan); margin-bottom: 20px; font-family: var(--font-mono); }
-    
-    .instruction-list { list-style: none; display: flex; flex-direction: column; gap: 18px; }
-    .instruction-item { display: flex; gap: 14px; font-size: 0.9rem; line-height: 1.5; color: var(--text-muted); }
-    .instruction-item strong { color: var(--text-main); display: block; margin-bottom: 4px; }
-    .icon-box { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 1.3rem; height: fit-content; }
+    #instructionsPanel h3 {
+      font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.25em;
+      color: var(--accent-cyan); margin-bottom: 18px; font-family: var(--font-mono);
+      display: flex; align-items: center; gap: 8px;
+    }
+    #instructionsPanel h3::after {
+      content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, var(--border-bright), transparent);
+    }
 
+    .instruction-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+    .instruction-item {
+      display: flex; gap: 12px; font-size: 0.82rem; line-height: 1.55; color: var(--text-muted);
+      padding: 10px 12px; border-radius: 8px; background: var(--surface);
+      border: 1px solid transparent; transition: border-color 0.25s, background 0.25s;
+    }
+    .instruction-item:hover { border-color: var(--border); background: var(--surface-hover); }
+    .instruction-item strong { color: var(--text-main); display: block; margin-bottom: 3px; font-size: 0.85rem; }
+    .icon-box {
+      background: linear-gradient(135deg, rgba(0,229,255,0.08), rgba(179,0,255,0.08));
+      border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px;
+      font-size: 1.2rem; height: fit-content; flex-shrink: 0;
+    }
+
+    /* ── BOTTOM TOAST ── */
     #bottom-toast {
-      position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%) translateY(20px);
-      z-index: 100; display: flex; align-items: center; gap: 12px; padding: 12px 24px;
-      background: rgba(5, 5, 7, 0.9); border: 1px solid var(--border); border-radius: 50px;
-      font-size: 0.85rem; color: var(--text-main); opacity: 0; transition: all 0.3s; backdrop-filter: blur(10px); white-space: nowrap;
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(20px);
+      z-index: 100; display: flex; align-items: center; gap: 10px; padding: 10px 20px;
+      background: rgba(3,3,10,0.92); border: 1px solid var(--border); border-radius: 100px;
+      font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-main);
+      opacity: 0; transition: all 0.35s cubic-bezier(0.16,1,0.3,1); backdrop-filter: blur(16px);
+      white-space: nowrap; box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
     #bottom-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+    /* ── CENTER ALERT ── */
     #center-alert {
-      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9);
-      z-index: 150; font-weight: 800; font-size: clamp(2rem, 5vw, 4rem); letter-spacing: 0.05em; text-align: center;
-      color: var(--text-main); opacity: 0; pointer-events: none; transition: all 0.3s ease; text-shadow: 0 10px 40px rgba(0,0,0,0.6);
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0.85);
+      z-index: 150; font-weight: 800; font-size: clamp(2rem,5vw,4rem);
+      letter-spacing: 0.08em; text-align: center;
+      color: var(--text-main); opacity: 0; pointer-events: none;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+      text-shadow: 0 0 60px currentColor;
     }
-    #center-alert.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    #center-alert.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
 
+    /* ── FLASH OVERLAY ── */
     #flashOverlay {
       position: fixed; inset: 0; background: var(--accent-cyan); opacity: 0;
       pointer-events: none; z-index: 50; transition: opacity 0.5s ease-out; mix-blend-mode: overlay;
     }
-    #flashOverlay.flash { opacity: 0.15; transition: opacity 0.05s ease-in; }
+    #flashOverlay.flash { opacity: 0.18; transition: opacity 0.05s ease-in; }
 
-    #clearBtn {
-      position: fixed; bottom: 40px; right: 40px; z-index: 100; padding: 12px 24px;
-      font-family: var(--font-mono); font-size: 0.8rem; font-weight: 700;
-      color: var(--bg); background: var(--text-main); border: none; border-radius: 4px;
+    /* ── CLEAR BTN ── */
+    .action-btn {
+      position: fixed; bottom: 32px; right: 32px; z-index: 100;
+      padding: 10px 22px; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--accent-red); background: rgba(255,51,102,0.08);
+      border: 1px solid rgba(255,51,102,0.3); border-radius: 6px;
       cursor: pointer; transition: 0.3s; opacity: 0; pointer-events: none;
     }
-    #clearBtn.visible { opacity: 1; pointer-events: all; }
-    #clearBtn:hover { background: var(--accent-red); color: #fff; }
+    .action-btn.visible { opacity: 1; pointer-events: all; }
+    .action-btn:hover {
+      background: var(--accent-red); color: #fff;
+      box-shadow: 0 0 20px rgba(255,51,102,0.4);
+    }
 
+    /* ── PUZZLE CANVAS ── */
+    #puzzleCanvas {
+      position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; opacity: 0; pointer-events: none;
+    }
+    #puzzleCanvas.active { opacity: 1; pointer-events: all; }
+
+    /* ── PUZZLE CONTROLS ── */
+    #puzzleControls {
+      position: fixed; bottom: 32px; right: 32px; z-index: 100;
+      opacity: 0; pointer-events: none; transition: 0.35s;
+      display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
+    }
+    #puzzleControls.visible { opacity: 1; pointer-events: all; }
+
+    .puzzle-btn {
+      padding: 11px 24px; font-family: var(--font-mono); font-size: 0.78rem; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      color: #fff; background: linear-gradient(135deg, var(--accent-purple), rgba(179,0,255,0.6));
+      border: 1px solid rgba(179,0,255,0.4); border-radius: 6px;
+      cursor: pointer; transition: 0.3s; box-shadow: var(--glow-purple);
+    }
+    .puzzle-btn:hover {
+      background: linear-gradient(135deg, var(--accent-cyan), rgba(0,229,255,0.7));
+      border-color: rgba(0,229,255,0.5); color: var(--bg); box-shadow: var(--glow-cyan);
+    }
+    .puzzle-btn-restart {
+      background: rgba(255,51,102,0.1); color: var(--accent-red);
+      border: 1px solid rgba(255,51,102,0.35); box-shadow: 0 0 12px rgba(255,51,102,0.15);
+      display: none;
+    }
+    .puzzle-btn-restart:hover {
+      background: var(--accent-red); color: #fff;
+      box-shadow: 0 0 24px rgba(255,51,102,0.5); border-color: var(--accent-red);
+    }
+    .puzzle-btn-restart.show { display: block; }
+
+    /* ── WIN OVERLAY ── */
+    #winOverlay {
+      position: fixed; inset: 0; background: rgba(3,3,10,0.88); z-index: 160;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: 0.5s; backdrop-filter: blur(16px);
+    }
+    #winOverlay.show { opacity: 1; pointer-events: all; }
+
+    .win-trophy {
+      font-size: 5rem; margin-bottom: 16px; animation: trophySpin 1s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    @keyframes trophySpin { from { transform: scale(0) rotate(-180deg); opacity:0; } to { transform: scale(1) rotate(0deg); opacity:1; } }
+
+    .win-text {
+      font-family: var(--font-sans); font-size: clamp(2rem,6vw,4rem); font-weight: 800;
+      letter-spacing: -0.02em; margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--accent-gold), #fff, var(--accent-gold));
+      -webkit-background-clip: text; 
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 30px rgba(229,192,123,0.5));
+    }
+    .win-sub {
+      font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-muted);
+      letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 36px;
+    }
+    .win-btn {
+      padding: 14px 40px; font-family: var(--font-mono); font-size: 0.85rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase;
+      background: linear-gradient(135deg, var(--accent-cyan), rgba(0,229,255,0.7));
+      color: var(--bg); border: none; border-radius: 6px;
+      cursor: pointer; transition: 0.3s; box-shadow: var(--glow-cyan);
+    }
+    .win-btn:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(0,229,255,0.5); }
+
+    /* ── SCAN LINE VIGNETTE ── */
+    #scanlines {
+      position: fixed; inset: 0; z-index: 4; pointer-events: none;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.03) 3px, rgba(0,0,0,0.03) 4px);
+      opacity: 0.6;
+    }
+    #vignette {
+      position: fixed; inset: 0; z-index: 5; pointer-events: none;
+      background: radial-gradient(ellipse 90% 90% at 50% 50%, transparent 60%, rgba(3,3,10,0.7) 100%);
+    }
+
+    /* ── CORNER DECORATIONS ── */
+    .corner-dec {
+      position: fixed; z-index: 99; width: 40px; height: 40px; pointer-events: none;
+      opacity: 0; transition: opacity 0.5s ease 0.6s;
+    }
+    .corner-dec.visible { opacity: 1; }
+    .corner-dec::before, .corner-dec::after { content: ''; position: absolute; background: var(--accent-cyan); }
+    .corner-dec::before { width: 2px; height: 24px; }
+    .corner-dec::after { width: 24px; height: 2px; }
+    .corner-tl { top: 16px; left: 16px; }
+    .corner-tl::before { top: 0; left: 0; }
+    .corner-tl::after { top: 0; left: 0; }
+    .corner-tr { top: 16px; right: 16px; transform: scaleX(-1); }
+    .corner-tr::before { top: 0; left: 0; }
+    .corner-tr::after { top: 0; left: 0; }
+    .corner-bl { bottom: 16px; left: 16px; transform: scaleY(-1); }
+    .corner-bl::before { top: 0; left: 0; }
+    .corner-bl::after { top: 0; left: 0; }
+    .corner-br { bottom: 16px; right: 16px; transform: scale(-1,-1); }
+    .corner-br::before { top: 0; left: 0; }
+    .corner-br::after { top: 0; left: 0; }
+
+    /* ── MODE LABEL ── */
+    #modeLabel {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%);
+      z-index: 99; pointer-events: none;
+      font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.3em;
+      text-transform: uppercase; color: rgba(255,255,255,0.15);
+      opacity: 0; transition: opacity 0.5s ease 0.6s;
+    }
+    #modeLabel.visible { opacity: 1; }
+
+    /* ── RESPONSIVE ── */
     @media (max-width: 768px) {
-      #topbar { padding: 16px 20px; flex-direction: column; gap: 16px; }
+      #topbar { padding: 14px 16px; flex-direction: column; gap: 12px; }
       .brand-container { width: 100%; justify-content: space-between; }
       .status-container { display: none; }
-      #modeSwitcher { width: 100%; }
-      .mode-btn { flex: 1; padding: 10px 8px; font-size: 0.75rem; }
-      #swipeIndicator { top: 150px; font-size: 0.75rem; }
-      #instructionsPanel { left: 20px; right: 20px; width: auto; top: 150px; }
-      #clearBtn { bottom: 90px; right: 20px; padding: 10px 16px; }
-      #bottom-toast { bottom: 20px; width: 90%; justify-content: center; }
+      #modeSwitcher { width: 100%; flex-wrap: wrap; }
+      .mode-btn { flex: 1 0 40%; padding: 9px 6px; font-size: 0.68rem; }
+      #swipeIndicator { top: 145px; font-size: 0.72rem; }
+      #instructionsPanel { left: 16px; right: 16px; width: auto; top: 145px; }
+      .action-btn { bottom: 80px; right: 16px; padding: 9px 14px; }
+      #puzzleControls { bottom: 130px; right: 16px; }
+      #bottom-toast { bottom: 16px; max-width: 90vw; justify-content: center; }
+      .corner-dec { display: none; }
+      #modeLabel { display: none; }
+      .splash-logo { font-size: clamp(2.8rem, 12vw, 5rem); }
+      .splash-features { gap: 8px; }
     }
   </style>
 </head>
@@ -190,12 +479,13 @@
 
 <div id="splash">
   <div class="splash-logo">Gesture Control</div>
-  <div class="splash-sub">Precision Gesture Control Engine</div>
+  <div class="splash-logo-sub">Precision Gesture Engine</div>
   <button class="enter-btn" id="enterBtn">Let's Go</button>
 </div>
 
 <div id="videoWrap">
   <video id="vid" autoplay playsinline muted></video>
+  <canvas id="puzzleCanvas"></canvas>
   <canvas id="fxCanvas"></canvas>
   <canvas id="drawCanvas"></canvas>
 </div>
@@ -209,6 +499,7 @@
     <button class="mode-btn active" data-mode="interact">Particle</button>
     <button class="mode-btn" data-mode="shape">Geometry</button>
     <button class="mode-btn" data-mode="cursor">Sketch</button>
+    <button class="mode-btn" data-mode="puzzle">Puzzle</button>
   </div>
   <div class="status-container">
     <div class="hud-chip"><div class="dot" id="camDot"></div> FPS <span class="hud-val" id="fpsVal">--</span></div>
@@ -225,7 +516,17 @@
 
 <div id="bottom-toast"><div class="dot active" id="gestDot"></div><span id="gestLabel">Awaiting telemetry...</span></div>
 <div id="center-alert"></div>
-<button id="clearBtn">Clear Canvas</button>
+<button id="clearBtn" class="action-btn">Clear Canvas</button>
+
+<div id="puzzleControls">
+  <button class="puzzle-btn" id="startPuzzleBtn">Start Puzzle</button>
+  <button class="puzzle-btn puzzle-btn-restart" id="restartPuzzleBtn">↺ Restart</button>
+</div>
+
+<div id="winOverlay">
+  <div class="win-text">COMPLETE! 🏆</div>
+  <button class="win-btn" id="playAgainBtn">Play Again</button>
+</div>
 
 <script>
 // ══════════════════════════════════════════════════════════
@@ -239,15 +540,11 @@ function initAudio() {
 
 function playShootSound() {
     if (!audioCtx) return;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(600, audioCtx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-    osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.15);
 }
 
 function playExplosionSound() {
@@ -256,21 +553,20 @@ function playExplosionSound() {
     const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
     const data = buffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1; 
-    
-    const noise = audioCtx.createBufferSource();
-    noise.buffer = buffer;
-    
-    const filter = audioCtx.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(800, audioCtx.currentTime);
-    filter.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
-    
-    const gain = audioCtx.createGain();
-    gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
-    
-    noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
-    noise.start();
+    const noise = audioCtx.createBufferSource(); noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter(); filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(800, audioCtx.currentTime); filter.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.3);
+    const gain = audioCtx.createGain(); gain.gain.setValueAtTime(0.4, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    noise.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination); noise.start();
+}
+
+function playClickSound() {
+    if (!audioCtx) return;
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.type = 'sine'; osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.05);
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + 0.05);
 }
 
 // ══════════════════════════════════════════════════════════
@@ -279,15 +575,17 @@ function playExplosionSound() {
 const vid = document.getElementById('vid');
 const fxCanvas = document.getElementById('fxCanvas');
 const drawCanvas = document.getElementById('drawCanvas');
+const puzzleCanvas = document.getElementById('puzzleCanvas');
 const fxCtx = fxCanvas.getContext('2d');
 const drCtx = drawCanvas.getContext('2d');
+const pzCtx = puzzleCanvas.getContext('2d');
 
 let W = 0, H = 0;
 let vidW = 1280, vidH = 720; 
 
 let rawHands = [], smoothedHands = []; 
 
-const MODES = ['interact', 'shape', 'cursor'];
+const MODES = ['interact', 'shape', 'cursor', 'puzzle'];
 let currentModeIndex = 0;
 let mode = MODES[currentModeIndex];
 
@@ -298,9 +596,10 @@ let colorCooldown = [0, 0];
 
 // Sketch Engine
 let drawPaths = []; 
-let activePaths = [null, null]; // Replaced simple array with object to store custom colors
+let activePaths = [null, null]; 
 let isDrawingArr = [false, false];
-let currentColors = ['#00e5ff', '#ff3366']; // Default starting colors for Hand 1 and Hand 2
+let currentColors = ['#00e5ff', '#ff3366'];
+let handStateWas = [false, false]; // Track hand state for hysteresis 
 
 // Interaction Engine
 let pinchWas = [false, false];
@@ -308,8 +607,7 @@ let gunCocked = [false, false];
 let chargeLevel = 0;
 let lastSphereCenter = null;
 let sphereVelocity = { x: 0, y: 0 };
-let plasmaBalls = []; 
-let fireballs = []; 
+let plasmaBalls = [], fireballs = []; 
 
 let time = 0, lastT = performance.now();
 let fpsCounter = 0, fpsLast = performance.now();
@@ -322,14 +620,14 @@ const centerAlert = document.getElementById('center-alert'), flashOverlay = docu
 const helpToggle = document.getElementById('helpToggle'), instructionsPanel = document.getElementById('instructionsPanel');
 const swipeIndicator = document.getElementById('swipeIndicator');
 const clearBtn = document.getElementById('clearBtn');
+const puzzleControls = document.getElementById('puzzleControls');
+const winOverlay = document.getElementById('winOverlay');
 let alertTimer = null;
 
-// UPDATED EXPLICIT INSTRUCTIONS
 const INSTRUCTIONS = {
   interact: [
     { icon: '🔫', title: 'Fireball Blaster', desc: 'Make a "Finger Gun" (Index pointing forward, middle/ring/pinky curled down). Point your thumb UP to cock it, tap your thumb DOWN to fire!' },
     { icon: '🔮', title: 'Plasma Sphere', desc: 'Hold both open palms close together (facing each other). Wait for it to charge 100%, aim, and rapidly pull hands apart to throw!' },
-    { icon: '🤌', title: 'Pinch Gesture', desc: 'Pinch your thumb and finger together to activate the pulse gesture.' },
     { icon: '🤟', title: 'Secure Swipe (Change Mode)', desc: 'Hold up ONLY your Index and Pinky fingers. A blue badge will appear. Swipe your hand left or right to change modes.' }
   ],
   shape: [
@@ -337,11 +635,191 @@ const INSTRUCTIONS = {
     { icon: '🤟', title: 'Secure Swipe (Change Mode)', desc: 'Hold up ONLY your Index and Pinky fingers. Swipe your hand left or right to change modes.' }
   ],
   cursor: [
-    { icon: '✍️', title: 'Sketch & Draw', desc: 'Pinch your Thumb and Middle finger together to draw. The Index finger acts as the tip of the pen.' },
+    { icon: '✍️', title: 'Sketch & Draw', desc: ' The Index finger acts as the tip of the pen.' },
     { icon: '🖐️', title: 'Change Colors', desc: 'Open your hand completely (all 5 fingers extended outward) to instantly change your pen color.' },
+    { icon: '🤟', title: 'Secure Swipe (Change Mode)', desc: 'Hold up ONLY your Index and Pinky fingers. Swipe your hand left or right to change modes.' }
+  ],
+  puzzle: [
+    { icon: '📸', title: 'Start Game', desc: 'Click "Start Puzzle" to take a snapshot of the camera.' },
+    { icon: '🤏', title: 'Slide Pieces', desc: 'Pinch (Index+Thumb) over a piece next to the empty slot, then DRAG your hand toward the empty slot to move it.' },
     { icon: '🤟', title: 'Secure Swipe (Change Mode)', desc: 'Hold up ONLY your Index and Pinky fingers. Swipe your hand left or right to change modes.' }
   ]
 };
+
+// ══════════════════════════════════════════════════════════
+// PUZZLE ENGINE
+// ══════════════════════════════════════════════════════════
+let puzzleGrid = []; // Array of objects { currentPos: i, correctPos: i, imageData: canvas }
+let emptySlot = 8; // Bottom right initially
+const GRID_COLS = 3;
+const GRID_ROWS = 3;
+let isPuzzleActive = false;
+let draggedPiece = null; // index of piece being dragged
+let dragStartX = 0, dragStartY = 0;
+let dragOffset = { x: 0, y: 0 };
+
+function initPuzzle() {
+    isPuzzleActive = true;
+    puzzleCanvas.classList.add('active');
+    
+    // Calculate sizing to keep it square and centered
+    const size = Math.min(W, H) * 0.75;
+    const offsetX = (W - size) / 2;
+    const offsetY = (H - size) / 2;
+    const pieceW = size / GRID_COLS;
+    const pieceH = size / GRID_ROWS;
+
+    // Take snapshot from hidden temporary canvas (to match orientation)
+    const snapCanvas = document.createElement('canvas');
+    snapCanvas.width = W; snapCanvas.height = H;
+    const snapCtx = snapCanvas.getContext('2d');
+    snapCtx.translate(W, 0); snapCtx.scale(-1, 1);
+    
+    // Try to draw video centered based on aspect ratios
+    const vidAspect = vidW / vidH; const winAspect = W / H;
+    if (winAspect > vidAspect) {
+        const renderH = W / vidAspect;
+        snapCtx.drawImage(vid, 0, (H - renderH)/2, W, renderH);
+    } else {
+        const renderW = H * vidAspect;
+        snapCtx.drawImage(vid, (W - renderW)/2, 0, renderW, H);
+    }
+
+    puzzleGrid = [];
+    emptySlot = 8; // bottom right
+
+    for (let i = 0; i < GRID_COLS * GRID_ROWS; i++) {
+        if (i === emptySlot) continue;
+        
+        const row = Math.floor(i / GRID_COLS);
+        const col = i % GRID_COLS;
+        
+        // Extract piece from snapshot with proper filtering for quality
+        const pCanvas = document.createElement('canvas');
+        pCanvas.width = pieceW; pCanvas.height = pieceH;
+        const pCtx = pCanvas.getContext('2d');
+        pCtx.imageSmoothingEnabled = true;
+        pCtx.imageSmoothingQuality = 'high';
+        pCtx.drawImage(snapCanvas, offsetX + col*pieceW, offsetY + row*pieceH, pieceW, pieceH, 0, 0, pieceW, pieceH);
+
+        puzzleGrid.push({
+            currentPos: i,
+            correctPos: i,
+            img: pCanvas
+        });
+    }
+
+    // Shuffle
+    shufflePuzzle();
+    // Show restart button, hide start button
+    document.getElementById('startPuzzleBtn').style.display = 'none';
+    document.getElementById('restartPuzzleBtn').classList.add('show');
+    puzzleControls.classList.add('visible');
+}
+
+function shufflePuzzle() {
+    for (let i = 0; i < 100; i++) {
+        const neighbors = getNeighbors(emptySlot);
+        const randomNeighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
+        swapPieces(randomNeighbor, emptySlot, false, false); 
+    }
+}
+
+function getNeighbors(index) {
+    const row = Math.floor(index / GRID_COLS);
+    const col = index % GRID_COLS;
+    const neighbors = [];
+    if (row > 0) neighbors.push(index - GRID_COLS); // Top
+    if (row < GRID_ROWS - 1) neighbors.push(index + GRID_COLS); // Bottom
+    if (col > 0) neighbors.push(index - 1); // Left
+    if (col < GRID_COLS - 1) neighbors.push(index + 1); // Right
+    return neighbors;
+}
+
+function swapPieces(pieceIndex, targetIndex, playSound = true, checkWin = true) {
+    const piece = puzzleGrid.find(p => p.currentPos === pieceIndex);
+    if (piece) {
+        piece.currentPos = targetIndex;
+        emptySlot = pieceIndex;
+        if (playSound) playClickSound();
+        if (checkWin) {
+            checkWinCondition();
+        }
+    }
+}
+
+function checkWinCondition() {
+    const isWin = puzzleGrid.every(p => p.currentPos === p.correctPos);
+    if (isWin && isPuzzleActive) {
+        isPuzzleActive = false;
+        winOverlay.classList.add('show');
+        // Fireworks
+        for(let i=0; i<5; i++) {
+            setTimeout(() => {
+                spawnParticles(W/2 + (Math.random()-0.5)*W*0.8, H/2 + (Math.random()-0.5)*H*0.8, '#ffea00', 40);
+                spawnParticles(W/2 + (Math.random()-0.5)*W*0.8, H/2 + (Math.random()-0.5)*H*0.8, '#ff3366', 40);
+                playExplosionSound();
+            }, i * 300);
+        }
+    }
+}
+
+function drawPuzzle() {
+    pzCtx.clearRect(0, 0, W, H);
+    if (!isPuzzleActive && puzzleGrid.length === 0) return;
+
+    const size = Math.min(W, H) * 0.75;
+    const offsetX = (W - size) / 2;
+    const offsetY = (H - size) / 2;
+    const pieceW = size / GRID_COLS;
+    const pieceH = size / GRID_ROWS;
+
+    // Draw Grid Background with gradient
+    const grad = pzCtx.createLinearGradient(offsetX, offsetY, offsetX, offsetY + size);
+    grad.addColorStop(0, 'rgba(0,0,0,0.6)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.3)');
+    pzCtx.fillStyle = grad;
+    pzCtx.fillRect(offsetX, offsetY, size, size);
+    
+    // Draw grid lines for visual clarity
+    pzCtx.strokeStyle = 'rgba(0,229,255,0.1)';
+    pzCtx.lineWidth = 1;
+    for (let i = 1; i < GRID_COLS; i++) {
+      pzCtx.beginPath();
+      pzCtx.moveTo(offsetX + i * pieceW, offsetY);
+      pzCtx.lineTo(offsetX + i * pieceW, offsetY + size);
+      pzCtx.stroke();
+    }
+    for (let i = 1; i < GRID_ROWS; i++) {
+      pzCtx.beginPath();
+      pzCtx.moveTo(offsetX, offsetY + i * pieceH);
+      pzCtx.lineTo(offsetX + size, offsetY + i * pieceH);
+      pzCtx.stroke();
+    }
+
+    puzzleGrid.forEach(p => {
+        let drawX = offsetX + (p.currentPos % GRID_COLS) * pieceW;
+        let drawY = offsetY + Math.floor(p.currentPos / GRID_COLS) * pieceH;
+
+        if (draggedPiece === p.currentPos) {
+            // Add drag offset
+            drawX += dragOffset.x;
+            drawY += dragOffset.y;
+            pzCtx.shadowBlur = 15; pzCtx.shadowColor = 'var(--accent-cyan)'; pzCtx.shadowOffsetX = 2; pzCtx.shadowOffsetY = 2;
+        } else {
+            pzCtx.shadowBlur = 4; pzCtx.shadowColor = 'rgba(0,0,0,0.5)'; pzCtx.shadowOffsetX = 1; pzCtx.shadowOffsetY = 1;
+        }
+
+        pzCtx.drawImage(p.img, drawX, drawY, pieceW, pieceH);
+        
+        // Borders
+        pzCtx.shadowBlur = 0;
+        pzCtx.strokeStyle = draggedPiece === p.currentPos ? 'var(--accent-cyan)' : 'rgba(255,255,255,0.2)';
+        pzCtx.lineWidth = draggedPiece === p.currentPos ? 3 : 1;
+        pzCtx.strokeRect(drawX, drawY, pieceW, pieceH);
+    });
+    pzCtx.shadowBlur = 0;
+}
 
 // ══════════════════════════════════════════════════════════
 // UTILITIES & MATHEMATICS
@@ -350,6 +828,7 @@ function resize() {
   W = window.innerWidth; H = window.innerHeight;
   fxCanvas.width = W; fxCanvas.height = H;
   drawCanvas.width = W; drawCanvas.height = H;
+  puzzleCanvas.width = W; puzzleCanvas.height = H;
   redrawCanvas(); 
 }
 window.addEventListener('resize', resize); resize();
@@ -367,6 +846,7 @@ function getRenderBounds() {
 
 function lm(pt) { 
   const b = getRenderBounds();
+  // Remember canvas is flipped, but we want coordinates that map to the visual screen
   return { x: (pt.x * b.renderW) - b.offsetX, y: (pt.y * b.renderH) - b.offsetY };
 }
 
@@ -374,9 +854,11 @@ function smoothLandmarks(current, previous) {
   if (!previous || previous.length !== current.length) return current;
   return current.map((hand, hIdx) => hand.map((pt, lIdx) => {
     const prevPt = previous[hIdx][lIdx];
+    // Clamp velocity to reasonable range and apply exponential smoothing
     const velocity = Math.hypot(pt.x - prevPt.x, pt.y - prevPt.y);
-    const factor = Math.min(Math.max(velocity * 20, 0.15), 0.8); 
-    return { x: lerp(prevPt.x, pt.x, factor), y: lerp(prevPt.y, pt.y, factor), z: lerp(prevPt.z || 0, pt.z || 0, factor) };
+    const clampedVelocity = Math.min(velocity, 0.1); // Cap at 0.1 to prevent jumps
+    const factor = 0.35 + clampedVelocity * 3; // Range: 0.35-0.65 for stable tracking
+    return { x: lerp(prevPt.x, pt.x, Math.min(factor, 0.65)), y: lerp(prevPt.y, pt.y, Math.min(factor, 0.65)), z: lerp(prevPt.z || 0, pt.z || 0, factor) };
   }));
 }
 
@@ -411,6 +893,11 @@ function setMode(index) {
   document.querySelectorAll('.mode-btn').forEach((btn, i) => btn.classList.toggle('active', i === currentModeIndex));
   clearBtn.classList.toggle('visible', mode === 'cursor');
   drawCanvas.style.opacity = mode === 'cursor' ? '1' : '0';
+  
+  puzzleControls.classList.toggle('visible', mode === 'puzzle');
+  document.getElementById('startPuzzleBtn').style.display = (mode === 'puzzle' && !isPuzzleActive) ? 'block' : 'none';
+  document.getElementById('restartPuzzleBtn').classList.toggle('show', mode === 'puzzle' && isPuzzleActive);
+  puzzleCanvas.classList.toggle('active', mode === 'puzzle');
 
   updateInstructions();
   showAlert(`${mode === 'cursor' ? 'SKETCH' : mode.toUpperCase()}`, '#fff');
@@ -426,7 +913,7 @@ function isSwipePose(hand) {
   const tipMid = dist3D(hand[12], hand[0]) / palmSize;
   const tipRng = dist3D(hand[16], hand[0]) / palmSize;
   const tipPnk = dist3D(hand[20], hand[0]) / palmSize;
-  return (tipIdx > 1.6 && tipPnk > 1.5 && tipMid < 1.3 && tipRng < 1.3);
+  return (tipIdx > 1.5 && tipPnk > 1.45 && tipMid < 1.2 && tipRng < 1.2);
 }
 
 function isPointingPose(hand) {
@@ -436,20 +923,20 @@ function isPointingPose(hand) {
   const tipMid = dist3D(hand[12], hand[0]) / palmSize;
   const tipRng = dist3D(hand[16], hand[0]) / palmSize;
   const tipPnk = dist3D(hand[20], hand[0]) / palmSize;
-  // Relaxed constraints for finger gun to ensure it tracks reliably
-  return (tipIdx > 1.4 && tipMid < 1.25 && tipRng < 1.25 && tipPnk < 1.25);
+  return (tipIdx > 1.3 && tipMid < 1.15 && tipRng < 1.15 && tipPnk < 1.15);
 }
 
 function isOpenHand(hand) {
   const palmSize = dist3D(hand[0], hand[9]); 
   if (palmSize === 0) return false;
-  // All fingers extended
-  return (
-    dist3D(hand[8], hand[0]) / palmSize > 1.4 &&
-    dist3D(hand[12], hand[0]) / palmSize > 1.4 &&
-    dist3D(hand[16], hand[0]) / palmSize > 1.4 &&
-    dist3D(hand[20], hand[0]) / palmSize > 1.4
-  );
+  // More lenient: require 4 out of 5 fingers extended
+  const extendedFingers = [
+    dist3D(hand[8], hand[0]) / palmSize > 1.2,
+    dist3D(hand[12], hand[0]) / palmSize > 1.2,
+    dist3D(hand[16], hand[0]) / palmSize > 1.2,
+    dist3D(hand[20], hand[0]) / palmSize > 1.2
+  ];
+  return extendedFingers.filter(e => e).length >= 3;
 }
 
 function detectSwipe(hand) {
@@ -459,14 +946,14 @@ function detectSwipe(hand) {
   swipeIndicator.classList.add('active');
   const currentX = hand[0].x; 
   palmXHistory.push(currentX);
-  if (palmXHistory.length > 12) palmXHistory.shift();
+  if (palmXHistory.length > 10) palmXHistory.shift(); // Reduced from 12 to 10 for faster response
 
-  if (palmXHistory.length === 12) {
-    const deltaX = palmXHistory[11] - palmXHistory[0];
-    if (Math.abs(deltaX) > 0.12) {
+  if (palmXHistory.length === 10) {
+    const deltaX = palmXHistory[9] - palmXHistory[0];
+    if (Math.abs(deltaX) > 0.1) { // Slightly reduced threshold for better responsiveness
       const direction = deltaX > 0 ? -1 : 1; 
       setMode(currentModeIndex + direction);
-      triggerFlash(); palmXHistory = []; swipeCooldown = 50; 
+      triggerFlash(); palmXHistory = []; swipeCooldown = 45; // Reduced cooldown
     }
   }
 }
@@ -474,8 +961,11 @@ function detectSwipe(hand) {
 // ══════════════════════════════════════════════════════════
 // RENDERERS
 // ══════════════════════════════════════════════════════════
-function spawnRipple(x, y, color) { ripples.push({ x, y, r: 0, maxR: 120, life: 1, color }); }
+function spawnRipple(x, y, color) { 
+  if (ripples.length < 50) ripples.push({ x, y, r: 0, maxR: 120, life: 1, color }); // Cap ripples
+}
 function spawnParticles(x, y, color, count = 10) {
+  if (particles.length > 500) return; // Prevent excessive particles
   for (let i = 0; i < count; i++) {
     const a = Math.random() * Math.PI * 2, s = Math.random() * 5 + 1;
     particles.push({ x, y, vx: Math.cos(a)*s, vy: Math.sin(a)*s, life: 1, color });
@@ -497,15 +987,11 @@ function drawEffects() {
   fxCtx.clearRect(0, 0, W, H);
   
   for (let i = plasmaBalls.length - 1; i >= 0; i--) {
-    let pb = plasmaBalls[i];
-    pb.x += pb.vx; pb.y += pb.vy;
+    let pb = plasmaBalls[i]; pb.x += pb.vx; pb.y += pb.vy;
     fxCtx.save(); fxCtx.translate(pb.x, pb.y);
-    fxCtx.beginPath(); fxCtx.arc(0, 0, pb.radius * 1.5, 0, Math.PI * 2);
-    fxCtx.fillStyle = 'rgba(0, 229, 255, 0.3)'; fxCtx.shadowBlur = 30; fxCtx.shadowColor = '#00e5ff'; fxCtx.fill();
-    fxCtx.beginPath(); fxCtx.arc(0, 0, pb.radius, 0, Math.PI * 2); fxCtx.fillStyle = '#ffffff'; fxCtx.fill();
-    fxCtx.restore();
+    fxCtx.beginPath(); fxCtx.arc(0, 0, pb.radius * 1.5, 0, Math.PI * 2); fxCtx.fillStyle = 'rgba(0, 229, 255, 0.3)'; fxCtx.shadowBlur = 30; fxCtx.shadowColor = '#00e5ff'; fxCtx.fill();
+    fxCtx.beginPath(); fxCtx.arc(0, 0, pb.radius, 0, Math.PI * 2); fxCtx.fillStyle = '#ffffff'; fxCtx.fill(); fxCtx.restore();
     spawnParticles(pb.x, pb.y, '#00e5ff', 3);
-
     if (pb.x < -100 || pb.x > W + 100 || pb.y < -100 || pb.y > H + 100) {
       spawnParticles(pb.x, pb.y, '#b300ff', 50); spawnRipple(pb.x, pb.y, '#00e5ff');
       playExplosionSound(); plasmaBalls.splice(i, 1);
@@ -513,17 +999,11 @@ function drawEffects() {
   }
 
   for (let i = fireballs.length - 1; i >= 0; i--) {
-    let fb = fireballs[i];
-    fb.x += fb.vx; fb.y += fb.vy;
-    
+    let fb = fireballs[i]; fb.x += fb.vx; fb.y += fb.vy;
     const grad = fxCtx.createRadialGradient(fb.x, fb.y, 0, fb.x, fb.y, fb.radius);
-    grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.3, '#ffea00');
-    grad.addColorStop(0.7, 'var(--accent-fire)'); grad.addColorStop(1, 'transparent');
-    
-    fxCtx.beginPath(); fxCtx.arc(fb.x, fb.y, fb.radius, 0, Math.PI * 2);
-    fxCtx.fillStyle = grad; fxCtx.fill();
+    grad.addColorStop(0, '#ffffff'); grad.addColorStop(0.3, '#ffea00'); grad.addColorStop(0.7, 'var(--accent-fire)'); grad.addColorStop(1, 'transparent');
+    fxCtx.beginPath(); fxCtx.arc(fb.x, fb.y, fb.radius, 0, Math.PI * 2); fxCtx.fillStyle = grad; fxCtx.fill();
     spawnParticles(fb.x, fb.y, 'var(--accent-fire)', 2);
-
     if (fb.x < -50 || fb.x > W + 50 || fb.y < -50 || fb.y > H + 50) {
       spawnParticles(fb.x, fb.y, '#ffea00', 25); spawnRipple(fb.x, fb.y, 'var(--accent-fire)');
       playExplosionSound(); fireballs.splice(i, 1);
@@ -531,33 +1011,28 @@ function drawEffects() {
   }
 
   for (let i = ripples.length - 1; i >= 0; i--) {
-    const r = ripples[i]; r.r += (r.maxR - r.r) * 0.12; r.life -= 0.03;
+    const r = ripples[i]; r.r += (r.maxR - r.r) * 0.15; r.life -= 0.04;
     if (r.life <= 0) { ripples.splice(i, 1); continue; }
-    fxCtx.beginPath(); fxCtx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
-    fxCtx.strokeStyle = r.color; fxCtx.lineWidth = 2; fxCtx.globalAlpha = r.life; fxCtx.stroke();
+    fxCtx.beginPath(); fxCtx.arc(r.x, r.y, r.r, 0, Math.PI * 2); fxCtx.strokeStyle = r.color; fxCtx.lineWidth = 2; fxCtx.globalAlpha = Math.max(r.life, 0); fxCtx.stroke();
   }
   for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= 0.02;
+    const p = particles[i]; p.x += p.vx; p.y += p.vy; p.vy += 0.12; p.life -= 0.025;
     if (p.life <= 0) { particles.splice(i, 1); continue; }
-    fxCtx.beginPath(); fxCtx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
-    fxCtx.fillStyle = p.color; fxCtx.globalAlpha = p.life; fxCtx.fill();
+    fxCtx.beginPath(); fxCtx.arc(p.x, p.y, 2, 0, Math.PI * 2); fxCtx.fillStyle = p.color; fxCtx.globalAlpha = Math.max(p.life, 0); fxCtx.fill();
   }
   fxCtx.globalAlpha = 1;
 }
 
-function drawSkeleton(hand, color) {
+function drawSkeleton(hand, color, showShadow = true) {
   fxCtx.save();
   const CONN = [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],[13,17],[0,17],[17,18],[18,19],[19,20]];
-  fxCtx.shadowBlur = 12; fxCtx.shadowColor = color;
+  if (showShadow) { fxCtx.shadowBlur = 8; fxCtx.shadowColor = color; }
   CONN.forEach(([a, b]) => {
     const pa = lm(hand[a]), pb = lm(hand[b]);
-    fxCtx.beginPath(); fxCtx.moveTo(pa.x, pa.y); fxCtx.lineTo(pb.x, pb.y);
-    fxCtx.strokeStyle = 'rgba(255,255,255,0.25)'; fxCtx.lineWidth = 1.5; fxCtx.stroke();
+    fxCtx.beginPath(); fxCtx.moveTo(pa.x, pa.y); fxCtx.lineTo(pb.x, pb.y); fxCtx.strokeStyle = 'rgba(255,255,255,0.2)'; fxCtx.lineWidth = 1.5; fxCtx.stroke();
   });
   [4, 8, 12, 16, 20].forEach(tip => {
-    const pt = lm(hand[tip]);
-    fxCtx.beginPath(); fxCtx.arc(pt.x, pt.y, 4, 0, Math.PI * 2);
-    fxCtx.fillStyle = color; fxCtx.fill();
+    const pt = lm(hand[tip]); fxCtx.beginPath(); fxCtx.arc(pt.x, pt.y, 3.5, 0, Math.PI * 2); fxCtx.fillStyle = color; fxCtx.fill();
   });
   fxCtx.restore();
 }
@@ -565,23 +1040,50 @@ function drawSkeleton(hand, color) {
 function renderPath(pathObj) {
   if (!pathObj || !pathObj.points || pathObj.points.length < 2) return;
   const pts = pathObj.points;
+  drCtx.beginPath(); const p0 = lm(pts[0]); drCtx.moveTo(p0.x, p0.y);
   
-  drCtx.beginPath(); 
-  const p0 = lm(pts[0]); drCtx.moveTo(p0.x, p0.y);
-  for (let i = 1; i < pts.length; i++) {
-    const pPrev = lm(pts[i - 1]), pCurr = lm(pts[i]);
-    const xc = (pCurr.x + pPrev.x) / 2, yc = (pCurr.y + pPrev.y) / 2;
-    drCtx.quadraticCurveTo(pPrev.x, pPrev.y, xc, yc);
+  // Use Catmull-Rom spline for smoother curves with more control points
+  if (pts.length <= 2) {
+    for (let i = 1; i < pts.length; i++) {
+      const pCurr = lm(pts[i]); drCtx.lineTo(pCurr.x, pCurr.y);
+    }
+  } else {
+    for (let i = 1; i < pts.length; i++) {
+      const p1 = lm(pts[Math.max(i-2, 0)]);
+      const p2 = lm(pts[i-1]);
+      const p3 = lm(pts[i]);
+      const p4 = lm(pts[Math.min(i+1, pts.length-1)]);
+      
+      // Catmull-Rom spline: smoother interpolation
+      for (let t = 0.1; t <= 1; t += 0.1) {
+        const t2 = t * t; const t3 = t2 * t;
+        const q = 0.5 * (
+          (2 * p2.x) +
+          (-p1.x + p3.x) * t +
+          (2 * p1.x - 5 * p2.x + 4 * p3.x - p4.x) * t2 +
+          (-p1.x + 3 * p2.x - 3 * p3.x + p4.x) * t3
+        );
+        const r = 0.5 * (
+          (2 * p2.y) +
+          (-p1.y + p3.y) * t +
+          (2 * p1.y - 5 * p2.y + 4 * p3.y - p4.y) * t2 +
+          (-p1.y + 3 * p2.y - 3 * p3.y + p4.y) * t3
+        );
+        drCtx.lineTo(q, r);
+      }
+    }
   }
-  const pLast = lm(pts[pts.length - 1]);
-  drCtx.lineTo(pLast.x, pLast.y);
-  drCtx.strokeStyle = pathObj.color; drCtx.lineWidth = 6; drCtx.lineCap = 'round';
-  drCtx.shadowBlur = 10; drCtx.shadowColor = pathObj.color; drCtx.stroke(); drCtx.shadowBlur = 0;
+  
+  drCtx.strokeStyle = pathObj.color; drCtx.lineWidth = 5; drCtx.lineCap = 'round'; drCtx.lineJoin = 'round';
+  drCtx.shadowBlur = 6; drCtx.shadowColor = pathObj.color; drCtx.stroke(); drCtx.shadowBlur = 0;
 }
 
 function redrawCanvas() {
   drCtx.clearRect(0, 0, W, H);
-  drawPaths.forEach(p => renderPath(p));
+  // Only iterate if we have paths to draw
+  if (drawPaths.length > 0) {
+    drawPaths.forEach(p => renderPath(p));
+  }
   if (activePaths[0]) renderPath(activePaths[0]);
   if (activePaths[1]) renderPath(activePaths[1]);
 }
@@ -595,6 +1097,9 @@ function processGestures() {
   if (!smoothedHands.length) { 
     setStatus('System Idle'); swipeIndicator.classList.remove('active'); 
     chargeLevel = Math.max(0, chargeLevel - 5);
+    
+    // Reset puzzle drag if hand lost
+    if (draggedPiece !== null) { draggedPiece = null; dragOffset = {x:0, y:0}; }
     return; 
   }
 
@@ -604,9 +1109,92 @@ function processGestures() {
   let isGunActive = false;
   let isColorChanging = false;
 
-  // Decrease color cycle cooldown
   colorCooldown[0] = Math.max(0, colorCooldown[0] - 1);
   colorCooldown[1] = Math.max(0, colorCooldown[1] - 1);
+
+  // ── PUZZLE LOGIC ──
+  if (mode === 'puzzle' && isPuzzleActive) {
+      const hand = smoothedHands[0]; // Use primary hand
+      const palmSize3D = dist3D(hand[0], hand[9]);
+      const isPinching = (dist3D(hand[4], hand[8]) / palmSize3D) < 0.42;
+      
+      drawSkeleton(hand, 'var(--accent-purple)', false);
+      
+      const indexPx = lm(hand[8]);
+      fxCtx.beginPath(); fxCtx.arc(indexPx.x, indexPx.y, 8, 0, Math.PI*2);
+      fxCtx.fillStyle = isPinching ? '#00e5ff' : '#fff'; fxCtx.shadowBlur = isPinching ? 12 : 0; 
+      fxCtx.shadowColor = isPinching ? '#00e5ff' : '#000';
+      fxCtx.fill(); fxCtx.shadowBlur = 0;
+
+      const size = Math.min(W, H) * 0.8;
+      const offsetX = (W - size) / 2;
+      const offsetY = (H - size) / 2;
+      const pieceW = size / GRID_COLS;
+      const pieceH = size / GRID_ROWS;
+
+      if (isPinching && draggedPiece === null) {
+          // Check if pinching over a valid neighbor
+          const neighbors = getNeighbors(emptySlot);
+          
+          for (let n of neighbors) {
+              // Note: n is the grid position (0-8), we need to find which piece is currently THERE
+              const pieceObj = puzzleGrid.find(p => p.currentPos === n);
+              if (!pieceObj) continue;
+              
+              const pieceX = offsetX + (n % GRID_COLS) * pieceW;
+              const pieceY = offsetY + Math.floor(n / GRID_COLS) * pieceH;
+              
+              // Canvas is flipped horizontally, so we need to flip the interaction check
+              // The rendered screen X is W - actual canvas X. 
+              // Wait, lm() already handles orientation mapping relative to screen.
+              const screenX = indexPx.x;
+              
+              if (screenX > pieceX && screenX < pieceX + pieceW && 
+                  indexPx.y > pieceY && indexPx.y < pieceY + pieceH) {
+                  
+                  draggedPiece = n;
+                  dragStartX = screenX;
+                  dragStartY = indexPx.y;
+                  break;
+              }
+          }
+      } else if (isPinching && draggedPiece !== null) {
+          // Calculate drag
+          dragOffset.x = indexPx.x - dragStartX;
+          dragOffset.y = indexPx.y - dragStartY;
+          
+          // Determine allowed drag direction based on empty slot position relative to dragged piece
+          const eRow = Math.floor(emptySlot / GRID_COLS); const eCol = emptySlot % GRID_COLS;
+          const dRow = Math.floor(draggedPiece / GRID_COLS); const dCol = draggedPiece % GRID_COLS;
+          
+          if (eRow === dRow) {
+             // Horizontal move allowed
+             dragOffset.y = 0;
+             if (eCol > dCol) dragOffset.x = Math.max(0, Math.min(pieceW, dragOffset.x)); // Drag right
+             else dragOffset.x = Math.min(0, Math.max(-pieceW, dragOffset.x)); // Drag left
+          } else {
+             // Vertical move allowed
+             dragOffset.x = 0;
+             if (eRow > dRow) dragOffset.y = Math.max(0, Math.min(pieceH, dragOffset.y)); // Drag down
+             else dragOffset.y = Math.min(0, Math.max(-pieceH, dragOffset.y)); // Drag up
+          }
+          
+          // If dragged far enough, complete swap
+          if (Math.abs(dragOffset.x) > pieceW * 0.5 || Math.abs(dragOffset.y) > pieceH * 0.5) {
+              swapPieces(draggedPiece, emptySlot);
+              draggedPiece = null; dragOffset = {x:0, y:0};
+          }
+          setStatus('Sliding piece...');
+      } else {
+          // Release
+          if (draggedPiece !== null) {
+             draggedPiece = null; dragOffset = {x:0, y:0};
+             playClickSound(); // Snap back
+          }
+          setStatus('Pinch to slide neighboring pieces.');
+      }
+      return; // Skip other logic in puzzle mode
+  }
 
   // ── SUPERPOWER LOGIC (CHARGE AND THROW SPHERE) ──
   if (mode === 'interact' && smoothedHands.length >= 2) {
@@ -615,14 +1203,12 @@ function processGestures() {
       
       if (palmsDist < 0.35 && palmsDist > 0.05) {
           isChargingSphere = true;
-          chargeLevel = Math.min(chargeLevel + 2, 100);
+          chargeLevel = Math.min(chargeLevel + 2.5, 100);
           
           const p1 = lm(h1[0]), p2 = lm(h2[0]);
           const cx = (p1.x + p2.x) / 2; const cy = (p1.y + p2.y) / 2;
 
-          if (lastSphereCenter) {
-              sphereVelocity = { x: cx - lastSphereCenter.x, y: cy - lastSphereCenter.y };
-          }
+          if (lastSphereCenter) { sphereVelocity = { x: cx - lastSphereCenter.x, y: cy - lastSphereCenter.y }; }
           lastSphereCenter = { x: cx, y: cy };
 
           const radius = (20 + chargeLevel * 0.4) + Math.sin(time * 15) * 8;
@@ -630,15 +1216,15 @@ function processGestures() {
           fxCtx.save(); fxCtx.translate(cx, cy);
           fxCtx.beginPath(); fxCtx.arc(0, 0, radius * 1.8, 0, Math.PI * 2);
           const outerGrad = fxCtx.createRadialGradient(0,0, radius, 0,0, radius*1.8);
-          outerGrad.addColorStop(0, 'rgba(0, 229, 255, 0.4)'); outerGrad.addColorStop(1, 'transparent');
+          outerGrad.addColorStop(0, 'rgba(0, 229, 255, 0.3)'); outerGrad.addColorStop(1, 'transparent');
           fxCtx.fillStyle = outerGrad; fxCtx.fill();
 
           fxCtx.rotate(time * 5); fxCtx.beginPath(); fxCtx.arc(0, 0, radius, 0, Math.PI * 2);
           const coreGrad = fxCtx.createRadialGradient(0,0,0, 0,0,radius);
           coreGrad.addColorStop(0, '#ffffff'); coreGrad.addColorStop(0.5, '#00e5ff'); coreGrad.addColorStop(1, '#b300ff');
-          fxCtx.fillStyle = coreGrad; fxCtx.shadowBlur = 30; fxCtx.shadowColor = '#00e5ff'; fxCtx.fill();
+          fxCtx.fillStyle = coreGrad; fxCtx.shadowBlur = 20; fxCtx.shadowColor = '#00e5ff'; fxCtx.fill();
 
-          fxCtx.strokeStyle = '#ffffff'; fxCtx.lineWidth = 3; fxCtx.globalAlpha = 0.8;
+          fxCtx.strokeStyle = '#ffffff'; fxCtx.lineWidth = 2.5; fxCtx.globalAlpha = 0.7;
           fxCtx.beginPath(); fxCtx.ellipse(0, 0, radius * 1.5, radius * 0.5, time * 2, 0, Math.PI * 2); fxCtx.stroke();
           fxCtx.strokeStyle = '#00e5ff';
           fxCtx.beginPath(); fxCtx.ellipse(0, 0, radius * 1.6, radius * 0.4, -time * 2.5, 0, Math.PI * 2); fxCtx.stroke();
@@ -646,11 +1232,11 @@ function processGestures() {
 
           const fingers = [8, 12, 16, 20]; 
           fingers.forEach(tip => {
-             if(Math.random() > 0.6) drawLightning(fxCtx, lm(h1[tip]).x, lm(h1[tip]).y, cx, cy, '#00e5ff');
-             if(Math.random() > 0.6) drawLightning(fxCtx, lm(h2[tip]).x, lm(h2[tip]).y, cx, cy, '#b300ff');
+             if(Math.random() > 0.75) drawLightning(fxCtx, lm(h1[tip]).x, lm(h1[tip]).y, cx, cy, '#00e5ff');
+             if(Math.random() > 0.75) drawLightning(fxCtx, lm(h2[tip]).x, lm(h2[tip]).y, cx, cy, '#b300ff');
           });
 
-          if (Math.random() > 0.1) spawnParticles(cx + (Math.random() - 0.5)*150, cy + (Math.random() - 0.5)*150, '#00e5ff', 3);
+          if (Math.random() > 0.2) spawnParticles(cx + (Math.random() - 0.5)*150, cy + (Math.random() - 0.5)*150, '#00e5ff', 2);
           setStatus(`Charging Power... ${Math.floor(chargeLevel)}%`);
       }
   }
@@ -670,10 +1256,10 @@ function processGestures() {
     const palmSize3D = dist3D(hand[0], hand[9]);
 
     if (mode === 'interact') {
-      drawSkeleton(hand, '#00e5ff');
+      drawSkeleton(hand, '#00e5ff', false);
       
       if (!isChargingSphere) {
-          const isPinching = (dist3D(hand[4], hand[8]) / palmSize3D) < 0.40;
+          const isPinching = (dist3D(hand[4], hand[8]) / palmSize3D) < 0.42;
           if (isPinching) anyPinching = true;
 
           // ── FIREBALL GUN LOGIC ──
@@ -681,44 +1267,38 @@ function processGestures() {
             isGunActive = true;
             
             const thumbDist = dist3D(hand[4], hand[5]) / palmSize3D;
-            // Relaxed thresholds for easy trigger
-            const isThumbUp = thumbDist > 0.5; 
-            const isThumbDown = thumbDist < 0.4; 
+            const isThumbUp = thumbDist > 0.52; 
+            const isThumbDown = thumbDist < 0.35; 
 
             const thumbPx = lm(hand[4]); const indexPx = lm(hand[8]);
 
             if (isThumbUp) {
                 gunCocked[i] = true;
                 fxCtx.beginPath(); fxCtx.arc(thumbPx.x, thumbPx.y, 12, 0, Math.PI*2);
-                fxCtx.fillStyle = '#ffffff'; fxCtx.shadowBlur = 20; fxCtx.shadowColor = 'var(--accent-fire)'; fxCtx.fill(); fxCtx.shadowBlur = 0;
+                fxCtx.fillStyle = '#ffffff'; fxCtx.shadowBlur = 15; fxCtx.shadowColor = 'var(--accent-fire)'; fxCtx.fill(); fxCtx.shadowBlur = 0;
                 setStatus('Gun Cocked... Drop thumb to shoot!');
             } else if (isThumbDown && gunCocked[i]) {
                 gunCocked[i] = false;
                 playShootSound();
                 
                 const pBase = lm(hand[5]); 
-                const dx = indexPx.x - pBase.x; 
-                const dy = indexPx.y - pBase.y;
+                const dx = indexPx.x - pBase.x; const dy = indexPx.y - pBase.y;
                 const len = Math.hypot(dx, dy) || 1;
                 
                 const speed = 35; 
                 fireballs.push({ x: indexPx.x, y: indexPx.y, vx: (dx / len) * speed, vy: (dy / len) * speed, radius: 25 });
                 
-                spawnParticles(indexPx.x, indexPx.y, 'var(--accent-fire)', 15);
-                spawnRipple(indexPx.x, indexPx.y, 'var(--accent-fire)');
+                spawnParticles(indexPx.x, indexPx.y, 'var(--accent-fire)', 15); spawnRipple(indexPx.x, indexPx.y, 'var(--accent-fire)');
                 showAlert('FIRE!', 'var(--accent-fire)');
             }
             
-            fxCtx.beginPath(); fxCtx.arc(indexPx.x, indexPx.y, 8, 0, Math.PI*2);
-            fxCtx.strokeStyle = 'var(--accent-fire)'; fxCtx.lineWidth = 2; fxCtx.stroke();
+            fxCtx.beginPath(); fxCtx.arc(indexPx.x, indexPx.y, 8, 0, Math.PI*2); fxCtx.strokeStyle = 'var(--accent-fire)'; fxCtx.lineWidth = 2; fxCtx.stroke();
           } else {
             gunCocked[i] = false; 
           }
 
           if (isPinching && !pinchWas[i]) {
-            const pt = lm(hand[8]);
-            spawnRipple(pt.x, pt.y, '#00e5ff'); spawnParticles(pt.x, pt.y, '#fff', 20);
-            showAlert('PULSE', '#00e5ff');
+            const pt = lm(hand[8]); spawnRipple(pt.x, pt.y, '#00e5ff'); spawnParticles(pt.x, pt.y, '#fff', 20); showAlert('PULSE', '#00e5ff');
           }
           pinchWas[i] = isPinching;
       }
@@ -729,57 +1309,60 @@ function processGestures() {
       const indexNorm = { x: hand[8].x, y: hand[8].y };
 
       // ── COLOR CHANGING LOGIC ──
-      if (isOpenHand(hand)) {
-          isColorChanging = true;
+      if (isOpenHand(hand) && !handStateWas[i]) {
+          // Transition from closed to open - trigger color change
+          handStateWas[i] = true;
           if (colorCooldown[i] <= 0) {
               const hue = Math.floor(Math.random() * 360);
               currentColors[i] = `hsl(${hue}, 100%, 60%)`;
-              colorCooldown[i] = 40; // Cooldown to prevent hyper-flashing
+              colorCooldown[i] = 60; // Longer cooldown to prevent accidental re-triggering
               
               const palmCenter = lm(hand[9]);
               spawnRipple(palmCenter.x, palmCenter.y, currentColors[i]);
               spawnParticles(palmCenter.x, palmCenter.y, currentColors[i], 15);
               showAlert('NEW COLOR', currentColors[i]);
+              playClickSound();
           }
           
-          // Show skeleton with new color while hand is open
-          drawSkeleton(hand, currentColors[i]);
+          drawSkeleton(hand, currentColors[i], false); // Reduce shadow overhead
           setStatus('Color Updated! Pinch to sketch.');
           
-          // Stop drawing if hand opened
-          if (isDrawingArr[i] && activePaths[i] && activePaths[i].points.length > 2) {
-             drawPaths.push(activePaths[i]);
-          }
+          if (isDrawingArr[i] && activePaths[i] && activePaths[i].points.length > 2) drawPaths.push(activePaths[i]);
           activePaths[i] = null; isDrawingArr[i] = false;
-      } else {
-          // Normal Drawing Logic
-          const pulseR = 10 + Math.sin(time * 10) * 3;
-          fxCtx.beginPath(); fxCtx.arc(indexPx.x, indexPx.y, pulseR, 0, Math.PI*2);
-          fxCtx.strokeStyle = currentColors[i]; fxCtx.lineWidth = 2; fxCtx.stroke();
+      } else if (!isOpenHand(hand)) {
+          // Transition from open to closed
+          handStateWas[i] = false;
           
-          fxCtx.beginPath(); fxCtx.arc(indexPx.x, indexPx.y, 6, 0, Math.PI*2);
-          fxCtx.fillStyle = '#fff'; fxCtx.shadowBlur = 15; fxCtx.shadowColor = currentColors[i]; fxCtx.fill(); fxCtx.shadowBlur = 0;
+          const pulseR = 10 + Math.sin(time * 10) * 3;
+          fxCtx.beginPath(); fxCtx.arc(indexPx.x, indexPx.y, pulseR, 0, Math.PI*2); fxCtx.strokeStyle = currentColors[i]; fxCtx.lineWidth = 2; fxCtx.stroke();
+          fxCtx.beginPath(); fxCtx.arc(indexPx.x, indexPx.y, 6, 0, Math.PI*2); fxCtx.fillStyle = '#fff'; fxCtx.shadowBlur = 12; fxCtx.shadowColor = currentColors[i]; fxCtx.fill(); fxCtx.shadowBlur = 0;
 
-          // Transparent Thumb/Middle trackers
           fxCtx.beginPath(); fxCtx.arc(thumbPx.x, thumbPx.y, 5, 0, Math.PI*2); fxCtx.fillStyle = 'rgba(255,255,255, 0.4)'; fxCtx.fill();
           fxCtx.beginPath(); fxCtx.arc(midPx.x, midPx.y, 5, 0, Math.PI*2); fxCtx.fillStyle = 'rgba(255,255,255, 0.4)'; fxCtx.fill();
 
-          const isDrawingAction = (dist3D(hand[4], hand[12]) / palmSize3D) < 0.40; 
+          const isDrawingAction = (dist3D(hand[4], hand[12]) / palmSize3D) < 0.42; 
           
           if (isDrawingAction) {
             if (!isDrawingArr[i]) { 
-                activePaths[i] = { color: currentColors[i], points: [indexNorm] }; 
-                isDrawingArr[i] = true; 
-                spawnRipple(indexPx.x, indexPx.y, currentColors[i]); 
+                activePaths[i] = { color: currentColors[i], points: [indexNorm], smoothed: [indexNorm] }; isDrawingArr[i] = true; spawnRipple(indexPx.x, indexPx.y, currentColors[i]); 
             } else { 
                 const lastNorm = activePaths[i].points[activePaths[i].points.length-1];
                 const distMoved = Math.hypot(indexNorm.x - lastNorm.x, indexNorm.y - lastNorm.y);
-                
-                if(distMoved > 0.005 && distMoved < 0.15) {
-                    activePaths[i].points.push(indexNorm); 
-                } else if (distMoved >= 0.15) {
-                    drawPaths.push(activePaths[i]);
-                    activePaths[i] = { color: currentColors[i], points: [indexNorm] };
+                // Filter: only add if moved significantly (0.008 minimum) but not too far (0.12 max to avoid jumps)
+                if(distMoved > 0.008 && distMoved < 0.12) { 
+                    activePaths[i].points.push(indexNorm);
+                    // Smooth the added point with exponential moving average
+                    if (activePaths[i].smoothed.length > 0) {
+                      const lastSmooth = activePaths[i].smoothed[activePaths[i].smoothed.length - 1];
+                      activePaths[i].smoothed.push({
+                        x: lastSmooth.x * 0.6 + indexNorm.x * 0.4,
+                        y: lastSmooth.y * 0.6 + indexNorm.y * 0.4
+                      });
+                    }
+                } else if (distMoved >= 0.12) { 
+                    // Jumped too far - likely detection error, start new path
+                    if (activePaths[i].points.length > 2) drawPaths.push(activePaths[i]); 
+                    activePaths[i] = { color: currentColors[i], points: [indexNorm], smoothed: [indexNorm] }; 
                 }
             }
           } else {
@@ -788,9 +1371,7 @@ function processGestures() {
           }
       }
       
-      if (!isColorChanging) {
-         setStatus((isDrawingArr[0] || isDrawingArr[1]) ? 'Dual Sketching...' : 'Tracking Cursor');
-      }
+      if (!isColorChanging) setStatus((isDrawingArr[0] || isDrawingArr[1]) ? 'Dual Sketching...' : 'Tracking Cursor');
       redrawCanvas();
     }
   });
@@ -800,15 +1381,11 @@ function processGestures() {
       const h1 = smoothedHands[0], h2 = smoothedHands[1];
       const links = [{ id: 4, c: '#ff3366' }, { id: 8, c: '#00e5ff' }, { id: 12, c: '#b300ff' }, { id: 16, c: '#e5c07b' }, { id: 20, c: '#00ff9d' }];
 
-      fxCtx.save(); fxCtx.lineWidth = 2.5;
-      const pulse = (Math.sin(time * 6) + 1) / 2 * 0.5 + 0.5; 
-      
+      fxCtx.save(); fxCtx.lineWidth = 2.5; const pulse = (Math.sin(time * 6) + 1) / 2 * 0.5 + 0.5; 
       links.forEach(link => {
         const p1 = lm(h1[link.id]), p2 = lm(h2[link.id]);
         fxCtx.beginPath(); fxCtx.moveTo(p1.x, p1.y); fxCtx.lineTo(p2.x, p2.y);
-        fxCtx.strokeStyle = link.c; fxCtx.shadowBlur = 15; fxCtx.shadowColor = link.c;
-        fxCtx.globalAlpha = pulse; fxCtx.stroke();
-        
+        fxCtx.strokeStyle = link.c; fxCtx.shadowBlur = 15; fxCtx.shadowColor = link.c; fxCtx.globalAlpha = pulse; fxCtx.stroke();
         const cx = (p1.x + p2.x) / 2, cy = (p1.y + p2.y) / 2;
         fxCtx.globalAlpha = 1; fxCtx.beginPath(); fxCtx.arc(cx, cy, 3.5, 0, Math.PI * 2);
         fxCtx.fillStyle = '#ffffff'; fxCtx.shadowBlur = 20; fxCtx.shadowColor = link.c; fxCtx.fill();
@@ -822,18 +1399,18 @@ function processGestures() {
   }
 
   if (mode === 'shape') {
-    smoothedHands.forEach(hand => drawSkeleton(hand, '#e5c07b'));
+    smoothedHands.forEach(hand => drawSkeleton(hand, '#e5c07b', false));
     if (smoothedHands.length >= 2) {
       const h1 = smoothedHands[0], h2 = smoothedHands[1];
       const currentDist = dist3D(h1[0], h2[0]);
       const indexUp = h1[8].y < h1[5].y && h2[8].y < h2[5].y;
-      const isCloseEnough = heartWas ? (currentDist < 0.35) : (currentDist < 0.25);
+      const isCloseEnough = heartWas ? (currentDist < 0.34) : (currentDist < 0.26);
       
       if (isCloseEnough && indexUp) {
         if (!heartWas) {
            const center = lm({ x: (h1[0].x + h2[0].x)/2, y: (h1[0].y + h2[0].y)/2 });
            spawnParticles(center.x, center.y, '#ff3366', 40);
-           showAlert('GEOMETRY LOCKED', '#ff3366'); triggerFlash();
+           showAlert('GEOMETRY LOCKED', '#ff3366'); triggerFlash(); playExplosionSound();
         }
         heartWas = true; setStatus('Geometry Locked');
       } else { heartWas = false; setStatus('Align palms to form shape'); }
@@ -859,7 +1436,10 @@ function renderLoop(ts) {
   else if (rawHands.length >= 2) { sortedHands = rawHands.sort((a, b) => a[0].x - b[0].x); }
 
   smoothedHands = smoothLandmarks(sortedHands, smoothedHands);
+  
+  if (mode === 'puzzle') drawPuzzle();
   drawEffects();
+  
   processGestures();
 }
 
@@ -871,6 +1451,29 @@ clearBtn.addEventListener('click', () => {
 
 helpToggle.addEventListener('click', () => { 
   helpToggle.classList.toggle('active'); instructionsPanel.classList.toggle('show'); 
+});
+
+document.getElementById('startPuzzleBtn').addEventListener('click', () => {
+    initAudio();
+    playClickSound();
+    initPuzzle();
+});
+
+document.getElementById('restartPuzzleBtn').addEventListener('click', () => {
+    initAudio();
+    playClickSound();
+    winOverlay.classList.remove('show');
+    isPuzzleActive = false;
+    puzzleGrid = [];
+    draggedPiece = null;
+    pzCtx.clearRect(0, 0, W, H);
+    initPuzzle();
+});
+
+document.getElementById('playAgainBtn').addEventListener('click', () => {
+    winOverlay.classList.remove('show');
+    playClickSound();
+    initPuzzle();
 });
 
 async function initSensors() {
